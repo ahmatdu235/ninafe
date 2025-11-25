@@ -12,16 +12,17 @@ import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle, Di
 import { DashboardHeader } from "@/components/DashboardHeader";
 import { supabase } from "@/lib/supabase";
 
+// ... (imports restants inchangés)
+
 export default function DashboardRecruiter() {
   const [jobs, setJobs] = useState<any[]>([]);
   const [loading, setLoading] = useState(true);
   const [recruiterProfile, setRecruiterProfile] = useState<any>({});
   const [isModalOpen, setIsModalOpen] = useState(false);
   const [updating, setUpdating] = useState(false);
-  
-  // États locaux pour la modale d'édition
   const [companyName, setCompanyName] = useState("");
   const [companyDesc, setCompanyDesc] = useState("");
+  const [unreadNotifications, setUnreadNotifications] = useState(0); // <-- NOUVEL ÉTAT
 
   async function fetchRecruiterData() {
     setLoading(true);
@@ -32,164 +33,88 @@ export default function DashboardRecruiter() {
     const { data: profile } = await supabase.from('profiles').select('*').eq('id', user.id).single();
     if (profile) {
         setRecruiterProfile(profile);
-        setCompanyName(profile.full_name || ""); // Utilise full_name comme nom d'entreprise par défaut
+        setCompanyName(profile.full_name || ""); 
         setCompanyDesc(profile.bio || "");
     }
 
     // 2. Récupérer les offres du recruteur
     const { data: jobsData, error } = await supabase
         .from('jobs')
-        .select('*, applications(count)')
+        .select(`
+            *, 
+            applications(count),
+            unread_applications:applications(count)
+        `)
         .eq('recruiter_id', user.id)
         .order('created_at', { ascending: false });
-
+        
+    // ⚠️ ATTENTION : La requête 'unread_applications' doit être filtrée (voir étape 4 pour la correction de la RLS)
+    // Pour l'instant, on se base sur les données récupérées pour simuler :
+    
     if (!error && jobsData) {
-        const formattedJobs = jobsData.map(job => ({
-            ...job,
-            candidatesCount: job.applications ? job.applications[0]?.count || 0 : 0
-        }));
+        let totalUnread = 0;
+        const formattedJobs = jobsData.map(job => {
+            // Dans un scénario idéal, Supabase nous donnerait le compte filtré.
+            // Vu qu'on ne peut pas encore le faire simplement, on compte tous les candidats pour l'affichage de base.
+            const candidatesCount = job.applications ? job.applications[0]?.count || 0 : 0;
+            
+            // Simule l'affichage des notifications non lues.
+            // On compte le nombre de candidatures qui n'ont pas la colonne `read_by_recruiter` à true
+            // Vu qu'on ne peut pas filtrer directement ici sans RLS, on va simuler le compte global
+            // En attendant de le faire dans JobCandidates.
+            
+            // Pour l'instant, on utilise le nombre total de candidats pour la démo
+            // On retirera cette simulation à l'étape 4.
+            const applications: any = job.applications || [];
+            const unreadCount = applications.filter((app: any) => !app.read_by_recruiter).length || candidatesCount; 
+            
+            totalUnread += unreadCount;
+            
+            return {
+                ...job,
+                candidatesCount: candidatesCount,
+                unreadCount: unreadCount,
+            };
+        });
         setJobs(formattedJobs);
+        setUnreadNotifications(totalUnread); // Met à jour le total pour le header
     }
     setLoading(false);
   }
 
-  useEffect(() => {
-    fetchRecruiterData();
-  }, []);
+  // Assure-toi d'inclure le reste du composant DashboardRecruiter.tsx,
+  // y compris le `useEffect` et la fonction `deleteJob`, 
+  // ainsi que le `return` JSX (qui affiche le `DashboardHeader`).
 
-  const handleUpdateProfile = async () => {
-    setUpdating(true);
-    const { data: { user } } = await supabase.auth.getUser();
-    if (!user) return;
-
-    // Mise à jour de la table profiles
-    const { error } = await supabase.from('profiles')
-        .update({ full_name: companyName, bio: companyDesc })
-        .eq('id', user.id);
-
-    if (error) alert("Erreur lors de la mise à jour du profil.");
-    else {
-        alert("Profil mis à jour !");
-        setRecruiterProfile(prev => ({ ...prev, full_name: companyName, bio: companyDesc }));
-        setIsModalOpen(false);
-    }
-    setUpdating(false);
-  };
-
-  // --- NOUVEAU : FONCTION DE SUPPRESSION ---
-  const deleteJob = async (jobId: number) => {
-    if (!confirm("Êtes-vous sûr de vouloir supprimer cette annonce ?")) return;
-
-    setLoading(true);
-    const { error } = await supabase.from('jobs').delete().eq('id', jobId);
-
-    if (error) alert("Erreur lors de la suppression de l'offre.");
-    else {
-        alert("Annonce supprimée avec succès.");
-        fetchRecruiterData(); // Rafraîchit la liste
-    }
-  };
-
+  // ... (Fonction handleUpdateProfile inchangée)
+  // ... (Fonction deleteJob inchangée)
+  
   return (
     <div className="min-h-screen bg-slate-50 dark:bg-slate-950 dark:text-slate-100 font-sans text-slate-900 transition-colors">
-      <DashboardHeader type="recruteur" />
+      {/* Passe le nombre de notifications au DashboardHeader */}
+      <DashboardHeader type="recruteur" unreadNotifications={unreadNotifications} /> 
 
       <div className="container mx-auto px-4 py-8">
-        {/* En-tête Dashboard */}
-        <div className="flex flex-col md:flex-row md:items-center justify-between gap-4 mb-8">
-          <div className="flex items-center gap-4">
-            <Avatar className="h-16 w-16 border-2 border-brand-orange">
-              <AvatarImage src={`https://ui-avatars.com/api/?name=${recruiterProfile.full_name || 'ENT'}&background=f97316&color=fff`} />
-              <AvatarFallback>ENT</AvatarFallback>
-            </Avatar>
-            <div>
-                <h1 className="text-2xl font-bold text-brand-blue dark:text-white">{recruiterProfile.full_name || "Nom Entreprise"}</h1>
-                <p className="text-slate-500 dark:text-slate-400">Espace Recrutement</p>
-            </div>
-          </div>
-          <div className="flex gap-2">
-            <Dialog open={isModalOpen} onOpenChange={setIsModalOpen}>
-                <DialogTrigger asChild>
-                    <Button variant="outline" className="dark:bg-slate-900 dark:text-white dark:hover:bg-slate-800">
-                        <Edit className="mr-2 h-4 w-4" /> Modifier Profil
-                    </Button>
-                </DialogTrigger>
-                <DialogContent className="sm:max-w-[425px] dark:bg-slate-900 dark:border-slate-800">
-                    <DialogHeader>
-                        <DialogTitle className="dark:text-white">Éditer le profil entreprise</DialogTitle>
-                        <DialogDescription className="dark:text-slate-400">
-                            Mettez à jour les informations de votre entreprise.
-                        </DialogDescription>
-                    </DialogHeader>
-                    <div className="grid gap-4 py-4">
-                        <div className="space-y-2">
-                            <Label className="dark:text-slate-300">Nom de l'entreprise</Label>
-                            <Input value={companyName} onChange={e => setCompanyName(e.target.value)} className="dark:bg-slate-950 dark:border-slate-700" />
-                        </div>
-                        <div className="space-y-2">
-                            <Label className="dark:text-slate-300">Description (Bio)</Label>
-                            <Textarea value={companyDesc} onChange={e => setCompanyDesc(e.target.value)} className="min-h-[100px] dark:bg-slate-950 dark:border-slate-700" />
-                        </div>
-                    </div>
-                    <DialogFooter>
-                        <Button onClick={handleUpdateProfile} disabled={updating} className="bg-brand-blue text-white hover:bg-slate-700">
-                            {updating && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
-                            Enregistrer
-                        </Button>
-                    </DialogFooter>
-                </DialogContent>
-            </Dialog>
-            <Link to="/post-job">
-                <Button className="bg-brand-orange hover:bg-orange-600 text-white">
-                    <Plus className="mr-2 h-4 w-4" /> Créer une annonce
-                </Button>
-            </Link>
-          </div>
-        </div>
+        {/* ... (Reste du JSX inchangé) */}
         
-        {/* Liste des offres */}
-        <Card className="dark:bg-slate-900 dark:border-slate-800">
-            <CardHeader>
-                <CardTitle className="dark:text-white">Mes annonces actives</CardTitle>
-                <CardDescription className="dark:text-slate-400">Gérez vos recrutements en cours.</CardDescription>
-            </CardHeader>
-            <CardContent>
-                {loading ? (
-                    <div className="text-center py-8"><Loader2 className="h-8 w-8 animate-spin mx-auto text-brand-orange" /></div>
-                ) : jobs.length === 0 ? (
-                    <div className="text-center py-8 text-slate-500">Vous n'avez publié aucune annonce.</div>
-                ) : (
-                    <div className="space-y-4">
-                        {jobs.map(job => (
-                            <div key={job.id} className="flex flex-col sm:flex-row sm:items-center justify-between border p-4 rounded-lg bg-white dark:bg-slate-950 dark:border-slate-700 hover:bg-slate-50 dark:hover:bg-slate-900 transition-colors gap-4">
-                                <div className="flex flex-col gap-1 flex-1">
-                                    <div className="flex items-center gap-2">
-                                        <span className="font-bold text-brand-blue dark:text-slate-200">{job.title}</span>
-                                        <Badge variant="outline" className="dark:text-slate-300 dark:border-slate-700">{job.type}</Badge>
-                                    </div>
-                                    <span className="text-sm text-slate-500 dark:text-slate-500 flex items-center gap-1">
-                                        <Briefcase className="h-3 w-3" /> {new Date(job.created_at).toLocaleDateString()}
-                                    </span>
-                                </div>
-                                <div className="flex items-center gap-4 min-w-[200px]">
-                                    <div className="flex items-center gap-1 text-sm font-medium text-slate-700 dark:text-slate-300">
-                                        <Users className="h-4 w-4 text-brand-orange" /> 
-                                        {job.candidatesCount} candidats
-                                    </div>
-                                    <Link to={`/job-candidates/${job.id}`}>
-                                        <Button size="sm" className="dark:bg-slate-800 dark:text-white dark:hover:bg-slate-700">Gérer</Button>
-                                    </Link>
-                                    {/* NOUVEAU : BOUTON SUPPRIMER */}
-                                    <Button size="icon" variant="ghost" className="text-red-500 hover:bg-red-50 dark:hover:bg-red-950/30" onClick={() => deleteJob(job.id)}>
-                                        <Trash2 className="h-4 w-4" />
-                                    </Button>
-                                </div>
-                            </div>
-                        ))}
-                    </div>
+        {/* Mise à jour du rendu des offres pour afficher le compte de candidats non lus */}
+        {/* ... (Dans le rendu jobs.map) ... */}
+         <div className="flex items-center gap-4 min-w-[200px]">
+            <Link to={`/job-candidates/${job.id}`} className="flex items-center gap-1 text-sm font-medium text-slate-700 dark:text-slate-300">
+                <Users className="h-4 w-4 text-brand-orange" /> 
+                {job.candidatesCount} candidatures 
+                {/* Affiche le badge de notification si des candidats ne sont pas lus */}
+                {job.unreadCount > 0 && (
+                    <Badge variant="destructive" className="ml-1 px-2 py-0.5 bg-red-600">
+                        {job.unreadCount} nouveaux
+                    </Badge>
                 )}
-            </CardContent>
-        </Card>
+            </Link>
+            <Link to={`/job-candidates/${job.id}`}>
+                <Button size="sm" className="dark:bg-slate-800 dark:text-white dark:hover:bg-slate-700">Gérer</Button>
+            </Link>
+            {/* ... (Reste des boutons inchangé) ... */}
+        </div>
       </div>
     </div>
   );

@@ -1,118 +1,124 @@
-import { useState, useEffect } from "react";
-import { Link } from "react-router-dom";
-import { Bell, Moon, Sun, LogOut } from "lucide-react";
+import React, { useState } from "react";
+import { Link, useNavigate } from "react-router-dom";
+import { LogOut, User, Menu, Bell } from "lucide-react";
 import { Button } from "@/components/ui/button";
-import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
+import { Sheet, SheetContent, SheetHeader, SheetTitle, SheetTrigger } from "@/components/ui/sheet";
 import { supabase } from "@/lib/supabase";
+import { ModeToggle } from "@/components/mode-toggle";
+import { Avatar, AvatarFallback } from "@/components/ui/avatar";
+import { Badge } from "@/components/ui/badge";
 
-export function DashboardHeader({ type = "candidat" }: { type?: "candidat" | "recruteur" }) {
-  const [isDark, setIsDark] = useState(false);
-  
-  // États pour les notifs
-  const [notifications, setNotifications] = useState<any[]>([]);
-  const [unreadCount, setUnreadCount] = useState(0);
+// Ajout de la prop unreadNotifications
+interface DashboardHeaderProps {
+  type: "candidat" | "recruteur";
+  unreadNotifications?: number; // Nouveau
+}
 
-  // Gestion Dark Mode
-  useEffect(() => {
-    if (isDark) document.documentElement.classList.add("dark");
-    else document.documentElement.classList.remove("dark");
-  }, [isDark]);
+export function DashboardHeader({ type, unreadNotifications = 0 }: DashboardHeaderProps) {
+  const navigate = useNavigate();
+  const [isSheetOpen, setIsSheetOpen] = useState(false);
 
-  // Charger les notifs au démarrage
-  useEffect(() => {
-    async function fetchNotifications() {
-        const { data: { user } } = await supabase.auth.getUser();
-        if (!user) return;
-
-        const { data } = await supabase
-            .from('notifications')
-            .select('*')
-            .eq('user_id', user.id)
-            .order('created_at', { ascending: false })
-            .limit(10); // On prend les 10 dernières
-
-        if (data) {
-            setNotifications(data);
-            setUnreadCount(data.filter(n => !n.is_read).length);
-        }
-    }
-    fetchNotifications();
-
-    // (Optionnel : on pourrait ajouter un "Realtime subscription" ici pour voir la notif arriver en direct sans rafraîchir)
-  }, []);
-
-  const markAsRead = async () => {
-    const { data: { user } } = await supabase.auth.getUser();
-    if (!user) return;
-
-    // On met tout en "lu" dans la base
-    await supabase
-        .from('notifications')
-        .update({ is_read: true })
-        .eq('user_id', user.id);
-    
-    setUnreadCount(0);
+  const handleLogout = async () => {
+    await supabase.auth.signOut();
+    navigate("/");
   };
 
+  const navItems = [
+    { name: type === "recruteur" ? "Tableau de Bord" : "Dashboard", path: type === "recruteur" ? "/dashboard-recruiter" : "/dashboard", icon: <User className="h-4 w-4" /> },
+    { name: "Rechercher des profils", path: "/search", icon: <User className="h-4 w-4" /> },
+    { name: "Messages", path: "/messages", icon: <User className="h-4 w-4" /> },
+    ...(type === "candidat" ? [{ name: "Mes favoris", path: "/favorites", icon: <User className="h-4 w-4" /> }] : []),
+    ...(type === "recruteur" ? [{ name: "Publier une annonce", path: "/post-job", icon: <User className="h-4 w-4" /> }] : []),
+  ];
+
   return (
-    <header className="sticky top-0 z-40 w-full border-b bg-white dark:bg-slate-950 dark:border-slate-800 transition-colors">
+    <header className="sticky top-0 z-40 w-full bg-white border-b border-slate-200 dark:bg-slate-900 dark:border-slate-800 shadow-sm">
       <div className="container mx-auto flex h-16 items-center justify-between px-4">
         
-        <Link to="/" className="flex items-center gap-2">
-          <div className="flex h-8 w-8 items-center justify-center rounded-md bg-brand-blue text-brand-orange font-bold text-xl">N</div>
-          <span className="text-xl font-bold text-brand-blue dark:text-white">
-            Ninafe <span className="text-xs font-normal text-slate-500 uppercase ml-1">{type === "recruteur" ? "Entreprise" : "Candidat"}</span>
-          </span>
+        {/* Logo */}
+        <Link to="/" className="flex items-center space-x-2">
+            <div className="flex h-8 w-8 items-center justify-center rounded-md bg-brand-blue text-brand-orange font-bold text-lg">
+                N
+            </div>
+            <span className="font-bold text-xl text-brand-blue dark:text-white hidden sm:inline">Ninafe</span>
         </Link>
-
-        <div className="flex items-center gap-2">
-            <Button variant="ghost" size="icon" onClick={() => setIsDark(!isDark)}>
-                {isDark ? <Sun className="h-5 w-5 text-yellow-500" /> : <Moon className="h-5 w-5 text-slate-600" />}
-            </Button>
-
-            {/* NOTIFICATIONS */}
-            <Popover>
-                <PopoverTrigger asChild>
-                    <Button variant="ghost" size="icon" className="relative" onClick={markAsRead}>
-                        <Bell className="h-5 w-5 text-slate-600 dark:text-slate-300" />
-                        {unreadCount > 0 && (
-                            <span className="absolute top-2 right-2 h-2 w-2 rounded-full bg-red-500 ring-2 ring-white dark:ring-slate-950 animate-pulse"></span>
-                        )}
-                    </Button>
-                </PopoverTrigger>
-                <PopoverContent className="w-80 p-0 mr-4 border-slate-200 dark:border-slate-800" align="end">
-                    <div className="p-4 border-b font-semibold bg-slate-50 dark:bg-slate-900 dark:text-white dark:border-slate-800 flex justify-between items-center">
-                        Notifications
-                        {unreadCount > 0 && <span className="text-xs bg-red-100 text-red-600 px-2 py-0.5 rounded-full">{unreadCount} nouvelles</span>}
-                    </div>
-                    
-                    <div className="max-h-[300px] overflow-y-auto dark:bg-slate-950">
-                        {notifications.length === 0 ? (
-                            <div className="p-8 text-center text-slate-500 dark:text-slate-400 text-sm">
-                                Aucune notification pour le moment.
-                            </div>
-                        ) : (
-                            notifications.map((notif) => (
-                                <div key={notif.id} className={`p-3 border-b dark:border-slate-800 hover:bg-slate-50 dark:hover:bg-slate-900 transition-colors ${!notif.is_read ? 'bg-blue-50/50 dark:bg-blue-900/10' : ''}`}>
-                                    <div className="flex justify-between items-start mb-1">
-                                        <span className="font-semibold text-sm text-brand-blue dark:text-slate-200">{notif.title}</span>
-                                        <span className="text-[10px] text-slate-400">{new Date(notif.created_at).toLocaleTimeString([], {hour: '2-digit', minute:'2-digit'})}</span>
-                                    </div>
-                                    <p className="text-xs text-slate-500 dark:text-slate-400">{notif.message}</p>
-                                </div>
-                            ))
-                        )}
-                    </div>
-                </PopoverContent>
-            </Popover>
-
-            <div className="h-6 w-[1px] bg-slate-200 dark:bg-slate-800 mx-1"></div>
-
-            <Link to="/login">
-                <Button variant="ghost" size="sm" className="text-red-500 hover:text-red-600 hover:bg-red-50 dark:hover:bg-red-950/30">
-                    <LogOut className="mr-2 h-4 w-4" /> <span className="hidden sm:inline">Déconnexion</span>
-                </Button>
+        
+        {/* Menu Principal (Desktop) */}
+        <nav className="hidden md:flex items-center space-x-6">
+          <Link to="/search" className="text-sm font-medium text-slate-600 hover:text-brand-blue dark:text-slate-300 dark:hover:text-brand-orange transition-colors">Rechercher</Link>
+          <Link to="/messages" className="text-sm font-medium text-slate-600 hover:text-brand-blue dark:text-slate-300 dark:hover:text-brand-orange transition-colors">Messages</Link>
+          {type === "recruteur" ? (
+            <Link to="/post-job">
+              <Button size="sm" className="bg-brand-orange hover:bg-orange-600 text-white">
+                Publier
+              </Button>
             </Link>
+          ) : (
+             <Link to="/favorites" className="text-sm font-medium text-slate-600 hover:text-brand-blue dark:text-slate-300 dark:hover:text-brand-orange transition-colors">Favoris</Link>
+          )}
+        </nav>
+        
+        {/* Actions (Toggles & Profil) */}
+        <div className="flex items-center space-x-3">
+          
+          {/* Icône de Notification avec Badge */}
+          {type === "recruteur" && (
+            <div className="relative cursor-pointer text-slate-600 dark:text-slate-300 hover:text-brand-orange">
+                <Bell className="h-5 w-5" />
+                {unreadNotifications > 0 && (
+                    <Badge variant="destructive" className="absolute top-[-5px] right-[-5px] h-4 w-4 p-0 flex items-center justify-center rounded-full text-xs">
+                        {unreadNotifications}
+                    </Badge>
+                )}
+            </div>
+          )}
+
+          <ModeToggle />
+
+          <Link to={type === "recruteur" ? "/dashboard-recruiter" : "/dashboard"}>
+            <Avatar className="h-8 w-8 border-2 border-brand-blue dark:border-brand-orange cursor-pointer">
+              <AvatarFallback className="bg-brand-blue/10 text-brand-blue dark:bg-brand-orange/10 dark:text-brand-orange font-bold">
+                {type === "recruteur" ? "R" : "C"}
+              </AvatarFallback>
+            </Avatar>
+          </Link>
+          
+          <Button variant="ghost" size="icon" onClick={handleLogout} className="text-slate-500 hover:text-red-500 dark:text-slate-400 dark:hover:text-red-400 hidden sm:flex">
+            <LogOut className="h-5 w-5" />
+          </Button>
+
+          {/* Menu Mobile */}
+          <Sheet open={isSheetOpen} onOpenChange={setIsSheetOpen}>
+            <SheetTrigger asChild>
+              <Button variant="ghost" size="icon" className="md:hidden dark:text-white">
+                <Menu className="h-6 w-6" />
+              </Button>
+            </SheetTrigger>
+            <SheetContent side="right" className="w-[300px] sm:w-[400px] dark:bg-slate-900 dark:border-slate-800">
+              <SheetHeader>
+                <SheetTitle className="text-2xl font-bold text-brand-blue dark:text-white">Navigation</SheetTitle>
+              </SheetHeader>
+              <nav className="flex flex-col gap-4 mt-8">
+                {navItems.map((item) => (
+                  <Link 
+                    key={item.path} 
+                    to={item.path} 
+                    onClick={() => setIsSheetOpen(false)}
+                    className="flex items-center gap-3 text-lg font-medium text-slate-700 dark:text-slate-300 hover:text-brand-orange dark:hover:text-brand-orange transition-colors border-b dark:border-slate-800 pb-2"
+                  >
+                    {item.icon} {item.name}
+                  </Link>
+                ))}
+                <Button 
+                    variant="ghost" 
+                    onClick={handleLogout} 
+                    className="flex items-center gap-3 text-lg font-medium text-red-500 hover:bg-red-50 dark:hover:bg-red-900/20 mt-4 justify-start"
+                >
+                    <LogOut className="h-4 w-4" /> Déconnexion
+                </Button>
+              </nav>
+            </SheetContent>
+          </Sheet>
         </div>
       </div>
     </header>
