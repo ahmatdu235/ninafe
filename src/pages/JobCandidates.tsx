@@ -1,61 +1,61 @@
 import React, { useState, useEffect } from "react";
-import { useParams, Link } from "react-router-dom";
-import { ArrowLeft, Loader2, Mail, Download } from "lucide-react";
+import { useParams, Link, useNavigate } from "react-router-dom";
+import { ArrowLeft, FileText, Mail, User, Loader2, Download, CheckCircle, XCircle } from "lucide-react";
 import { Button } from "@/components/ui/button";
+import { Avatar, AvatarFallback } from "@/components/ui/avatar";
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
+import { Separator } from "@/components/ui/separator";
+import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { DashboardHeader } from "@/components/DashboardHeader";
 import { supabase } from "@/lib/supabase";
 
 export default function JobCandidates() {
   const { jobId } = useParams<{ jobId: string }>();
+  const navigate = useNavigate();
   const [job, setJob] = useState<any>(null);
   const [candidates, setCandidates] = useState<any[]>([]);
   const [loading, setLoading] = useState(true);
+  const [selectedCandidate, setSelectedCandidate] = useState<any>(null);
 
-  // Fonction pour marquer toutes les candidatures pour cette offre comme lues
+  // --- NOUVEAU : FONCTION MARQUER COMME LU ---
   const markApplicationsAsRead = async (jobId: string) => {
-    // On met à jour toutes les lignes de la table `applications`
-    // où `job_id` correspond à l'offre et où `read_by_recruiter` est false.
-    const { error } = await supabase
+    // On met à jour toutes les candidatures pour cette offre comme 'lues'
+    await supabase
         .from('applications')
         .update({ read_by_recruiter: true })
-        .eq('job_id', jobId)
-        .eq('read_by_recruiter', false); // On ne met à jour que les non lus
-
-    if (error) {
-        console.error("Erreur lors du marquage des candidatures comme lues:", error);
-    }
+        .eq('job_id', jobId);
+    
+    // Après avoir marqué comme lu, on redirige vers le dashboard pour rafraîchir le compte total de notifications
+    // Le dashboard se rafraîchira tout seul, mais on peut forcer un petit delay pour être sûr
+    setTimeout(() => {
+        // Optionnel: On pourrait rediriger ici pour forcer le rafraîchissement du compte de notifs dans le header
+    }, 500);
   };
 
   async function fetchCandidates() {
     setLoading(true);
     
-    // Marque les candidatures comme lues au moment de l'ouverture de la page
+    // 1. MARQUER COMME LU (Dès que le recruteur ouvre la page)
     if (jobId) {
         await markApplicationsAsRead(jobId);
     }
 
-    // Récupérer les détails de l'offre
-    const { data: jobData, error: jobError } = await supabase
+    // 2. Récupérer les détails de l'offre
+    const { data: jobData } = await supabase
         .from('jobs')
         .select('*')
         .eq('id', jobId)
         .single();
     
-    if (jobError || !jobData) {
-        console.error("Erreur de récupération de l'offre:", jobError);
-        setLoading(false);
-        return;
-    }
-    setJob(jobData);
+    if (jobData) setJob(jobData);
 
-    // Récupérer les candidatures pour cette offre
+    // 3. Récupérer les candidatures
     const { data: applicationsData, error: applicationsError } = await supabase
         .from('applications')
         .select(`
             *,
-            candidate:profiles (full_name, job_title, bio)
+            candidate:profiles!applications_candidate_id_fkey(full_name, job_title, bio)
         `)
         .eq('job_id', jobId);
 
@@ -67,19 +67,22 @@ export default function JobCandidates() {
 
   useEffect(() => {
     fetchCandidates();
-    
-    // Le cleanup pour se synchroniser :
-    // Après avoir marqué comme lu, on redirige vers le dashboard pour rafraîchir le compte total de notifications
-    return () => {
-        // Optionnel : tu peux forcer un rafraîchissement ici pour mettre à jour le header
-        // Mais en général, le Dashboard se rafraîchit tout seul lors du retour.
-    };
   }, [jobId]);
+
+  const updateStatus = async (id: number, newStatus: string) => {
+      // Mettre à jour le statut dans la base (Accepté/Refusé)
+      const { error } = await supabase.from('applications').update({ status: newStatus }).eq('id', id);
+      if (!error) {
+          // Mise à jour locale pour que l'interface change tout de suite
+          setCandidates(candidates.map(c => c.id === id ? { ...c, status: newStatus } : c));
+      }
+  };
+
 
   if (loading) {
     return (
         <div className="flex min-h-screen items-center justify-center bg-slate-50 dark:bg-slate-950">
-            <Loader2 className="h-10 w-10 text-brand-orange animate-spin" />
+            <Loader2 className="h-10 w-10 animate-spin mx-auto text-brand-orange" />
         </div>
     );
   }
@@ -88,63 +91,106 @@ export default function JobCandidates() {
     return (
         <div className="min-h-screen bg-slate-50 dark:bg-slate-950 p-8">
             <h1 className="text-2xl font-bold dark:text-white">Offre introuvable.</h1>
+            <p className="text-slate-500">Veuillez vérifier l'ID de l'offre dans l'URL.</p>
         </div>
     );
   }
 
+
   return (
     <div className="min-h-screen bg-slate-50 dark:bg-slate-950 dark:text-slate-100 font-sans text-slate-900 transition-colors">
       <DashboardHeader type="recruteur" />
-      
-      <div className="container mx-auto px-4 py-8">
-        <Link to="/dashboard-recruiter" className="flex items-center text-slate-500 hover:text-brand-blue mb-6 dark:text-slate-400">
-          <ArrowLeft className="mr-2 h-4 w-4" /> Retour au tableau de bord
-        </Link>
-        
-        <h1 className="text-3xl font-bold text-brand-blue dark:text-white mb-2">{job.title}</h1>
-        <p className="text-lg text-slate-500 dark:text-slate-400 mb-6">Gestion des candidatures | Ville : {job.location}</p>
 
-        <Card className="dark:bg-slate-900 dark:border-slate-800">
-            <CardHeader>
-                <CardTitle className="dark:text-white">Liste des {candidates.length} candidats</CardTitle>
-                <CardDescription className="dark:text-slate-400">Derniers candidats postulants pour cette offre.</CardDescription>
-            </CardHeader>
-            <CardContent>
-                {candidates.length === 0 ? (
-                    <div className="text-center py-8 text-slate-500 dark:text-slate-400">Aucun candidat pour l'instant.</div>
-                ) : (
-                    <div className="space-y-4">
-                        {candidates.map(app => (
-                            <div key={app.id} className="flex flex-col sm:flex-row sm:items-center justify-between border p-4 rounded-lg bg-white dark:bg-slate-950 dark:border-slate-700 hover:bg-slate-50 dark:hover:bg-slate-900 transition-colors gap-4">
-                                <div className="flex flex-col gap-1 flex-1">
-                                    <div className="flex items-center gap-2">
-                                        <span className="font-bold text-brand-blue dark:text-slate-200">
-                                            {app.candidate?.full_name || "Candidat Anonyme"}
+      <div className="container mx-auto px-4 py-8 max-w-5xl">
+        <div className="flex items-center justify-between mb-6">
+            <div>
+                <Link to="/dashboard-recruiter" className="flex items-center text-slate-500 hover:text-brand-blue mb-2 text-sm">
+                    <ArrowLeft className="mr-2 h-4 w-4" /> Retour au tableau de bord
+                </Link>
+                <h1 className="text-2xl font-bold text-brand-blue dark:text-white">{job.title || "Titre de l'offre"}</h1>
+                <p className="text-lg text-slate-500 dark:text-slate-400">Gestion des candidatures reçues ({candidates.length})</p>
+            </div>
+        </div>
+
+        {candidates.length === 0 ? (
+            <div className="text-center py-12 bg-white dark:bg-slate-900 rounded-lg border dark:border-slate-800">
+                <p className="text-slate-500 dark:text-slate-400">Aucun candidat pour l'instant.</p>
+            </div>
+        ) : (
+            <div className="space-y-4">
+                {candidates.map((app) => (
+                    <Card key={app.id} className="overflow-hidden border-l-4 border-l-brand-blue hover:shadow-md transition-shadow dark:bg-slate-900 dark:border-slate-700">
+                        <CardContent className="p-6">
+                            <div className="flex flex-col md:flex-row gap-6 items-start">
+
+                                {/* Info Candidat */}
+                                <div className="flex items-start gap-4 min-w-[250px]">
+                                    <Avatar className="h-16 w-16 border-2 border-slate-100 cursor-pointer">
+                                        <AvatarImage src={`https://ui-avatars.com/api/?name=${app.full_name}&background=random`} />
+                                        <AvatarFallback>{app.full_name?.charAt(0) || 'C'}</AvatarFallback>
+                                    </Avatar>
+                                    <div>
+                                        <h3 className="font-bold text-lg text-brand-blue dark:text-white">{app.full_name}</h3>
+                                        <p className="text-sm text-slate-500 dark:text-slate-400">{app.email}</p>
+                                        <span className={`text-xs font-bold px-2 py-1 rounded mt-2 inline-block ${
+                                            app.status === 'Accepté' ? 'bg-green-100 text-green-700' :
+                                            app.status === 'Refusé' ? 'bg-red-100 text-red-700' :
+                                            'bg-slate-100 text-slate-600'
+                                        }`}>
+                                            {app.status}
                                         </span>
-                                        {/* Affiche le statut "Nouveau" si non lu */}
-                                        {!app.read_by_recruiter && (
-                                            <Badge className="bg-green-500 hover:bg-green-600">Nouveau</Badge>
-                                        )}
                                     </div>
-                                    <span className="text-sm text-slate-500 dark:text-slate-500">
-                                        {app.candidate?.job_title || app.candidate?.bio || "Pas de titre de poste"}
-                                    </span>
                                 </div>
-                                
-                                <div className="flex items-center gap-4 min-w-[200px] justify-end">
-                                    <Button variant="outline" size="sm" className="dark:bg-slate-800 dark:text-white dark:hover:bg-slate-700 flex items-center gap-2">
-                                        <Download className="h-4 w-4" /> {app.cv_path ? "Télécharger CV" : "CV manquant"}
-                                    </Button>
-                                    <Button size="sm" className="bg-brand-orange hover:bg-orange-600 text-white flex items-center gap-2">
-                                        <Mail className="h-4 w-4" /> Contacter
-                                    </Button>
+
+                                <Separator orientation="vertical" className="hidden md:block h-auto bg-slate-100 dark:bg-slate-800" />
+
+                                {/* Message et Actions */}
+                                <div className="flex-1 flex flex-col justify-center gap-3">
+                                    <p className="text-sm italic text-slate-600 dark:text-slate-300 line-clamp-2">
+                                        <Mail className="h-4 w-4 mr-2 inline-block" /> {app.message}
+                                    </p>
+                                    <div className="flex gap-2">
+                                        <Button variant="outline" size="sm" className="dark:bg-slate-800 dark:text-white dark:hover:bg-slate-700 flex items-center gap-2">
+                                            <Download className="mr-2 h-4 w-4" /> CV
+                                        </Button>
+                                        <Button onClick={() => setSelectedCandidate(app)} variant="outline" size="sm" className="dark:bg-slate-800 dark:text-white dark:hover:bg-slate-700 flex items-center gap-2">
+                                            <User className="mr-2 h-4 w-4" /> Profil
+                                        </Button>
+                                    </div>
                                 </div>
+
+                                {/* Décision */}
+                                <div className="flex flex-col gap-2 min-w-[120px]">
+                                    <Button onClick={() => updateStatus(app.id, 'Accepté')} className="bg-green-600 hover:bg-green-700 text-white w-full text-xs">Accepter</Button>
+                                    <Button onClick={() => updateStatus(app.id, 'Refusé')} variant="outline" className="text-red-500 border-red-200 hover:bg-red-50 w-full text-xs dark:bg-transparent dark:hover:bg-red-900/20">Refuser</Button>
+                                </div>
+
                             </div>
-                        ))}
-                    </div>
+                        </CardContent>
+                    </Card>
+                ))}
+            </div>
+        )}
+
+        {/* MODALE DÉTAILS */}
+        <Dialog open={!!selectedCandidate} onOpenChange={() => setSelectedCandidate(null)}>
+            <DialogContent className="max-w-2xl dark:bg-slate-900 dark:border-slate-700 dark:text-white">
+                {selectedCandidate && (
+                    <>
+                        <DialogHeader>
+                            <DialogTitle className="text-2xl font-bold text-brand-blue dark:text-white">{selectedCandidate.full_name}</DialogTitle>
+                            <DialogDescription>Statut : {selectedCandidate.status}</DialogDescription>
+                        </DialogHeader>
+                        <div className="space-y-4">
+                            <div className="bg-slate-50 dark:bg-slate-800 p-4 rounded-lg">
+                                <h4 className="font-semibold mb-2 flex items-center gap-2"><Mail className="h-4 w-4" /> Message de motivation</h4>
+                                <p className="text-slate-700 dark:text-slate-300 text-sm leading-relaxed whitespace-pre-wrap">{selectedCandidate.message}</p>
+                            </div>
+                        </div>
+                    </>
                 )}
-            </CardContent>
-        </Card>
+            </DialogContent>
+        </Dialog>
       </div>
     </div>
   );
