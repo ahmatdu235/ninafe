@@ -1,130 +1,158 @@
-import React from "react";
+import React, { useState, useEffect } from "react";
 import { Link, useParams } from "react-router-dom";
-import { ArrowLeft, FileText, CreditCard, CheckCircle, XCircle, ShieldCheck, Download, Eye } from "lucide-react";
+import { ArrowLeft, FileText, Mail, User, Loader2, Download } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
-import { Badge } from "@/components/ui/badge";
+import { Card, CardContent } from "@/components/ui/card";
 import { Separator } from "@/components/ui/separator";
-
-// Simulation des candidats pour ce poste
-const candidates = [
-  { 
-    id: 1, 
-    name: "Moussa Diallo", 
-    role: "Technicien Réseau", 
-    location: "N'Djamena, Moursal",
-    status: "En attente",
-    isVerified: true, // Il a mis sa CNI
-    match: "95%",
-    documents: { cv: true, cni: true }
-  },
-  { 
-    id: 2, 
-    name: "Amina Youssouf", 
-    role: "Informaticienne", 
-    location: "N'Djamena, Sabangali",
-    status: "En attente",
-    isVerified: false, // Pas de CNI
-    match: "70%",
-    documents: { cv: true, cni: false }
-  },
-];
+import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
+import { DashboardHeader } from "@/components/DashboardHeader";
+import { supabase } from "@/lib/supabase";
 
 export default function JobCandidates() {
-  const { jobId } = useParams(); // On pourrait utiliser ça pour charger les bonnes données
+  const { jobId } = useParams();
+  const [candidates, setCandidates] = useState<any[]>([]);
+  const [jobTitle, setJobTitle] = useState("");
+  const [loading, setLoading] = useState(true);
+  const [selectedCandidate, setSelectedCandidate] = useState<any>(null);
 
-  const handleDownload = (docName: string, candidateName: string) => {
-    alert(`Téléchargement du document : ${docName} de ${candidateName}`);
+  useEffect(() => {
+    async function fetchData() {
+        // 1. Récupérer le titre du job
+        const { data: job } = await supabase.from('jobs').select('title').eq('id', jobId).single();
+        if (job) setJobTitle(job.title);
+
+        // 2. Récupérer les candidatures
+        const { data, error } = await supabase
+            .from('applications')
+            .select('*')
+            .eq('job_id', jobId)
+            .order('created_at', { ascending: false });
+
+        if (!error && data) {
+            setCandidates(data);
+        }
+        setLoading(false);
+    }
+    fetchData();
+  }, [jobId]);
+
+  const updateStatus = async (id: number, newStatus: string) => {
+      // Mettre à jour le statut dans la base (Accepté/Refusé)
+      const { error } = await supabase.from('applications').update({ status: newStatus }).eq('id', id);
+      if (!error) {
+          // Mise à jour locale pour que l'interface change tout de suite
+          setCandidates(candidates.map(c => c.id === id ? { ...c, status: newStatus } : c));
+      }
   };
 
   return (
-    <div className="min-h-screen bg-slate-50 font-sans text-slate-900">
-      {/* Header simple */}
-      <header className="bg-white border-b shadow-sm">
-        <div className="container mx-auto h-16 flex items-center px-4">
-           <Link to="/dashboard-recruiter" className="flex items-center text-slate-500 hover:text-brand-blue">
-            <ArrowLeft className="mr-2 h-4 w-4" /> Retour au tableau de bord
-          </Link>
-        </div>
-      </header>
+    <div className="min-h-screen bg-slate-50 dark:bg-slate-950 dark:text-slate-100 font-sans text-slate-900 transition-colors">
+      <DashboardHeader type="recruteur" />
 
       <div className="container mx-auto px-4 py-8 max-w-5xl">
         <div className="flex items-center justify-between mb-6">
             <div>
-                <h1 className="text-2xl font-bold text-brand-blue">Chauffeur Poids Lourd (CDD)</h1>
-                <p className="text-slate-500">Gestion des candidatures reçues</p>
+                <Link to="/dashboard-recruiter" className="flex items-center text-slate-500 hover:text-brand-blue mb-2 text-sm">
+                    <ArrowLeft className="mr-2 h-4 w-4" /> Retour
+                </Link>
+                <h1 className="text-2xl font-bold text-brand-blue dark:text-white">{jobTitle || "Chargement..."}</h1>
+                <p className="text-slate-500 dark:text-slate-400">Gestion des candidatures reçues</p>
             </div>
-            <Badge className="bg-brand-orange text-white text-base px-4 py-1">2 Candidats</Badge>
         </div>
 
-        <div className="space-y-4">
-            {candidates.map((candidate) => (
-                <Card key={candidate.id} className="overflow-hidden border-l-4 border-l-brand-blue hover:shadow-md transition-shadow">
-                    <CardContent className="p-6">
-                        <div className="flex flex-col md:flex-row gap-6">
-                            
-                            {/* 1. Info Candidat */}
-                            <div className="flex items-start gap-4 min-w-[250px]">
-                                <Avatar className="h-16 w-16 border-2 border-slate-100">
-                                    <AvatarImage src={`https://i.pravatar.cc/150?u=${candidate.id}`} />
-                                    <AvatarFallback>{candidate.name.charAt(0)}</AvatarFallback>
-                                </Avatar>
-                                <div>
-                                    <div className="flex items-center gap-2">
-                                        <h3 className="font-bold text-lg text-brand-blue">{candidate.name}</h3>
-                                        {candidate.isVerified && (
-                                            <Badge variant="secondary" className="bg-green-100 text-green-700 h-5 px-1.5" title="Identité vérifiée">
-                                                <ShieldCheck className="h-3 w-3 mr-1" /> Vérifié
-                                            </Badge>
-                                        )}
+        {loading ? (
+            <div className="text-center py-12"><Loader2 className="h-10 w-10 animate-spin mx-auto text-brand-orange" /></div>
+        ) : candidates.length === 0 ? (
+            <div className="text-center py-12 bg-white dark:bg-slate-900 rounded-lg border dark:border-slate-800">
+                <p className="text-slate-500">Aucune candidature pour le moment.</p>
+            </div>
+        ) : (
+            <div className="space-y-4">
+                {candidates.map((candidate) => (
+                    <Card key={candidate.id} className="overflow-hidden border-l-4 border-l-brand-blue hover:shadow-md transition-shadow dark:bg-slate-900 dark:border-slate-700">
+                        <CardContent className="p-6">
+                            <div className="flex flex-col md:flex-row gap-6 items-start">
+                                
+                                {/* Info Candidat */}
+                                <div className="flex items-start gap-4 min-w-[250px]">
+                                    <Avatar className="h-16 w-16 border-2 border-slate-100 cursor-pointer">
+                                        <AvatarImage src={`https://ui-avatars.com/api/?name=${candidate.full_name}&background=random`} />
+                                        <AvatarFallback>{candidate.full_name.charAt(0)}</AvatarFallback>
+                                    </Avatar>
+                                    <div>
+                                        <h3 className="font-bold text-lg text-brand-blue dark:text-white">{candidate.full_name}</h3>
+                                        <p className="text-sm text-slate-500 dark:text-slate-400">{candidate.email}</p>
+                                        <span className={`text-xs font-bold px-2 py-1 rounded mt-2 inline-block ${
+                                            candidate.status === 'Accepté' ? 'bg-green-100 text-green-700' :
+                                            candidate.status === 'Refusé' ? 'bg-red-100 text-red-700' :
+                                            'bg-slate-100 text-slate-600'
+                                        }`}>
+                                            {candidate.status}
+                                        </span>
                                     </div>
-                                    <p className="text-sm font-medium text-slate-700">{candidate.role}</p>
-                                    <p className="text-sm text-slate-500">{candidate.location}</p>
                                 </div>
-                            </div>
 
-                            <Separator orientation="vertical" className="hidden md:block h-auto bg-slate-100" />
+                                <Separator orientation="vertical" className="hidden md:block h-auto bg-slate-100 dark:bg-slate-800" />
 
-                            {/* 2. Documents Officiels (C'est ce que tu voulais !) */}
-                            <div className="flex-1 space-y-3">
-                                <h4 className="text-xs font-semibold text-slate-400 uppercase tracking-wider">Documents justificatifs</h4>
-                                <div className="flex flex-wrap gap-3">
-                                    {/* Bouton CV */}
-                                    <Button variant="outline" size="sm" className="bg-slate-50 border-slate-200" onClick={() => handleDownload("CV", candidate.name)}>
-                                        <FileText className="mr-2 h-4 w-4 text-blue-500" /> 
-                                        CV
-                                    </Button>
-
-                                    {/* Bouton CNI (Grisé si pas là) */}
-                                    {candidate.documents.cni ? (
-                                        <Button variant="outline" size="sm" className="bg-slate-50 border-slate-200" onClick={() => handleDownload("Pièce d'identité", candidate.name)}>
-                                            <CreditCard className="mr-2 h-4 w-4 text-green-600" /> 
-                                            Pièce d'Identité
+                                {/* Actions & Documents */}
+                                <div className="flex-1 flex flex-col justify-center gap-3">
+                                    <p className="text-sm italic text-slate-600 dark:text-slate-300 line-clamp-2">"{candidate.message}"</p>
+                                    <div className="flex gap-2">
+                                        <Button variant="outline" size="sm" onClick={() => setSelectedCandidate(candidate)} className="dark:bg-slate-800 dark:text-white">
+                                            <User className="mr-2 h-4 w-4" /> Voir Profil & Lettre
                                         </Button>
-                                    ) : (
-                                        <Badge variant="outline" className="h-9 px-3 text-slate-400 border-dashed border-slate-300 font-normal">
-                                            <XCircle className="mr-2 h-4 w-4" /> Pas de CNI
-                                        </Badge>
-                                    )}
+                                        <a href={candidate.cv_url} target="_blank" rel="noreferrer">
+                                            <Button variant="outline" size="sm" className="text-blue-600 border-blue-200 bg-blue-50 dark:bg-blue-900/20 dark:border-blue-900 dark:text-blue-300">
+                                                <Download className="mr-2 h-4 w-4" /> CV
+                                            </Button>
+                                        </a>
+                                    </div>
                                 </div>
-                            </div>
 
-                            {/* 3. Actions Recruteur */}
-                            <div className="flex flex-col gap-2 min-w-[140px] justify-center">
-                                <Button className="bg-green-600 hover:bg-green-700 text-white w-full">
-                                    <CheckCircle className="mr-2 h-4 w-4" /> Accepter
-                                </Button>
-                                <Button variant="outline" className="text-red-500 border-red-200 hover:bg-red-50 w-full">
-                                    <XCircle className="mr-2 h-4 w-4" /> Refuser
-                                </Button>
-                            </div>
+                                {/* Décision */}
+                                <div className="flex flex-col gap-2 min-w-[120px]">
+                                    <Button onClick={() => updateStatus(candidate.id, 'Accepté')} className="bg-green-600 hover:bg-green-700 text-white w-full text-xs">Accepter</Button>
+                                    <Button onClick={() => updateStatus(candidate.id, 'Refusé')} variant="outline" className="text-red-500 border-red-200 hover:bg-red-50 w-full text-xs dark:bg-transparent dark:hover:bg-red-900/20">Refuser</Button>
+                                </div>
 
+                            </div>
+                        </CardContent>
+                    </Card>
+                ))}
+            </div>
+        )}
+
+        {/* MODALE DÉTAILS */}
+        <Dialog open={!!selectedCandidate} onOpenChange={() => setSelectedCandidate(null)}>
+            <DialogContent className="max-w-2xl dark:bg-slate-900 dark:border-slate-700 dark:text-white">
+                {selectedCandidate && (
+                    <>
+                        <DialogHeader>
+                            <DialogTitle className="text-2xl font-bold text-brand-blue dark:text-white">{selectedCandidate.full_name}</DialogTitle>
+                        </DialogHeader>
+                        <div className="space-y-6 mt-4">
+                            <div className="bg-slate-50 dark:bg-slate-800 p-4 rounded-lg">
+                                <h4 className="font-semibold mb-2 flex items-center gap-2"><Mail className="h-4 w-4" /> Message de motivation</h4>
+                                <p className="text-slate-700 dark:text-slate-300 text-sm leading-relaxed whitespace-pre-wrap">{selectedCandidate.message}</p>
+                            </div>
+                            <div>
+                                <h4 className="font-semibold mb-3 flex items-center gap-2"><FileText className="h-4 w-4" /> Documents</h4>
+                                <a href={selectedCandidate.cv_url} target="_blank" rel="noreferrer" className="inline-block">
+                                    <div className="border dark:border-slate-700 p-3 rounded flex items-center gap-3 cursor-pointer hover:bg-slate-50 dark:hover:bg-slate-800">
+                                        <div className="bg-red-100 p-2 rounded text-red-600"><FileText /></div>
+                                        <div>
+                                            <p className="font-bold text-sm">Curriculum Vitae</p>
+                                            <p className="text-xs text-slate-500">Cliquez pour télécharger</p>
+                                        </div>
+                                    </div>
+                                </a>
+                            </div>
                         </div>
-                    </CardContent>
-                </Card>
-            ))}
-        </div>
+                    </>
+                )}
+            </DialogContent>
+        </Dialog>
       </div>
     </div>
   );

@@ -9,134 +9,214 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Separator } from "@/components/ui/separator";
 import { Badge } from "@/components/ui/badge";
+import { supabase } from "@/lib/supabase"; // On importe le client Supabase
 
 export default function PostJob() {
   const navigate = useNavigate();
   const [isLoading, setIsLoading] = useState(false);
   
-  // État pour gérer les tags (exigences)
+  // --- ÉTATS POUR CHAQUE CHAMP DU FORMULAIRE ---
+  const [companyName, setCompanyName] = useState("");
+  const [companyDesc, setCompanyDesc] = useState("");
+  const [title, setTitle] = useState("");
+  const [category, setCategory] = useState("");
+  const [location, setLocation] = useState("");
+  const [jobDesc, setJobDesc] = useState("");
+  const [salary, setSalary] = useState("");
+  const [contractType, setContractType] = useState("CDI"); // Valeur par défaut
+  
+  // Gestion des tags
   const [tagsInput, setTagsInput] = useState("");
+  // Transforme "React, Node" en ["React", "Node"]
+  const tagsArray = tagsInput.split(",").map(tag => tag.trim()).filter(tag => tag !== "");
 
-  const handleSubmit = () => {
+  const handleSubmit = async () => {
+    // 1. Vérification basique
+    if (!title || !companyName || !location || !category) {
+        alert("Veuillez remplir au moins le titre, l'entreprise, la catégorie et la ville.");
+        return;
+    }
+
     setIsLoading(true);
-    // Simulation d'envoi
-    setTimeout(() => {
-      setIsLoading(false);
-      navigate("/dashboard-recruiter");
-    }, 1500);
+
+    try {
+        // 2. Envoi des données à Supabase (Table 'jobs')
+        const { error } = await supabase
+            .from('jobs')
+            .insert({
+                title: title,
+                company_name: companyName,
+                company_description: companyDesc,
+                category: category,
+                location: location,
+                description: jobDesc,
+                tags: tagsArray, // On envoie le tableau de tags
+                salary: salary,
+                type: contractType
+                // recruiter_id est ajouté automatiquement par Supabase grâce au "default auth.uid()"
+            });
+
+        if (error) throw error;
+
+        // 3. Succès
+        alert("Annonce publiée avec succès !");
+        navigate("/dashboard-recruiter");
+
+    } catch (error: any) {
+        console.error("Erreur:", error);
+        alert("Erreur lors de la publication : " + error.message);
+    } finally {
+        setIsLoading(false);
+    }
   };
 
-  // Petite fonction magique pour transformer "Excel, Word, Java" en tableau de badges
-  const tagsPreview = tagsInput.split(",").map(tag => tag.trim()).filter(tag => tag !== "");
-
   return (
-    <div className="min-h-screen bg-slate-50 py-8 px-4 font-sans text-slate-900">
+    <div className="min-h-screen bg-slate-50 dark:bg-slate-950 py-8 px-4 font-sans text-slate-900 dark:text-slate-100 transition-colors">
       <div className="container mx-auto max-w-3xl">
         <Link to="/dashboard-recruiter" className="flex items-center text-slate-500 hover:text-brand-blue mb-6">
           <ArrowLeft className="mr-2 h-4 w-4" /> Retour au tableau de bord
         </Link>
 
-        <Card>
+        <Card className="dark:bg-slate-900 dark:border-slate-800">
           <CardHeader>
             <div className="flex h-12 w-12 items-center justify-center rounded-lg bg-brand-orange/10 text-brand-orange mb-4">
               <Briefcase />
             </div>
-            <CardTitle className="text-2xl font-bold text-brand-blue">Publier une annonce détaillée</CardTitle>
-            <CardDescription>Donnez le maximum d'informations pour attirer les meilleurs talents.</CardDescription>
+            <CardTitle className="text-2xl font-bold text-brand-blue dark:text-white">Publier une annonce réelle</CardTitle>
+            <CardDescription className="dark:text-slate-400">Votre annonce sera visible immédiatement par tous les candidats.</CardDescription>
           </CardHeader>
           
           <CardContent className="space-y-6">
             
-            {/* --- SECTION 1 : L'ENTREPRISE (Nouvelle demande) --- */}
+            {/* L'ENTREPRISE */}
             <div className="space-y-4">
-                <h3 className="text-lg font-semibold flex items-center gap-2 text-slate-800">
+                <h3 className="text-lg font-semibold flex items-center gap-2 text-slate-800 dark:text-white">
                     <Building2 className="h-4 w-4 text-brand-orange" /> L'Entreprise
                 </h3>
                 <div className="space-y-2">
-                    <Label>Nom de l'entreprise (ou Particulier)</Label>
-                    <Input placeholder="Ex: Tchad Numérique" />
+                    <Label className="dark:text-slate-300">Nom de l'entreprise</Label>
+                    <Input 
+                        className="dark:bg-slate-950 dark:border-slate-700" 
+                        placeholder="Ex: Tchad Numérique" 
+                        value={companyName}
+                        onChange={e => setCompanyName(e.target.value)}
+                    />
                 </div>
                 <div className="space-y-2">
-                    <Label>Présentation de l'entreprise</Label>
+                    <Label className="dark:text-slate-300">Présentation</Label>
                     <Textarea 
-                        placeholder="Qui êtes-vous ? (Ex: Leader de la tech à N'Djamena, nous cherchons à agrandir notre équipe...)" 
-                        className="min-h-[80px]" 
+                        className="min-h-[80px] dark:bg-slate-950 dark:border-slate-700" 
+                        placeholder="Décrivez votre activité..." 
+                        value={companyDesc}
+                        onChange={e => setCompanyDesc(e.target.value)}
                     />
                 </div>
             </div>
 
-            <Separator />
+            <Separator className="dark:bg-slate-800" />
 
-            {/* --- SECTION 2 : LE POSTE --- */}
+            {/* LE POSTE */}
             <div className="space-y-4">
-                <h3 className="text-lg font-semibold flex items-center gap-2 text-slate-800">
+                <h3 className="text-lg font-semibold flex items-center gap-2 text-slate-800 dark:text-white">
                     <Briefcase className="h-4 w-4 text-brand-orange" /> Le Poste
                 </h3>
                 <div className="space-y-2">
-                    <Label>Titre de l'annonce</Label>
-                    <Input placeholder="Ex: Cherche Plombier expérimenté" />
+                    <Label className="dark:text-slate-300">Titre de l'annonce *</Label>
+                    <Input 
+                        className="dark:bg-slate-950 dark:border-slate-700"
+                        placeholder="Ex: Cherche Plombier expérimenté" 
+                        value={title}
+                        onChange={e => setTitle(e.target.value)}
+                    />
                 </div>
                 <div className="grid gap-4 sm:grid-cols-2">
                     <div className="space-y-2">
-                        <Label>Catégorie</Label>
-                        <Select>
-                            <SelectTrigger><SelectValue placeholder="Sélectionner" /></SelectTrigger>
-                            <SelectContent>
-                                <SelectItem value="btp">BTP & Construction</SelectItem>
-                                <SelectItem value="tech">Informatique & Tech</SelectItem>
-                                <SelectItem value="services">Ménage & Services</SelectItem>
+                        <Label className="dark:text-slate-300">Catégorie *</Label>
+                        <Select onValueChange={setCategory}>
+                            <SelectTrigger className="dark:bg-slate-950 dark:border-slate-700"><SelectValue placeholder="Sélectionner" /></SelectTrigger>
+                            <SelectContent className="dark:bg-slate-950 dark:border-slate-700">
+                                <SelectItem value="BTP & Construction">BTP & Construction</SelectItem>
+                                <SelectItem value="Informatique & Tech">Informatique & Tech</SelectItem>
+                                <SelectItem value="Ménage & Services">Ménage & Services</SelectItem>
+                                <SelectItem value="Transport & Logistique">Transport & Logistique</SelectItem>
                             </SelectContent>
                         </Select>
                     </div>
                     <div className="space-y-2">
-                        <Label>Ville / Quartier</Label>
-                        <Input placeholder="Ex: N'Djamena, Moursal" />
+                        <Label className="dark:text-slate-300">Ville / Quartier *</Label>
+                        <Input 
+                            className="dark:bg-slate-950 dark:border-slate-700"
+                            placeholder="Ex: N'Djamena" 
+                            value={location}
+                            onChange={e => setLocation(e.target.value)}
+                        />
                     </div>
                 </div>
+                
+                {/* Type de contrat */}
                 <div className="space-y-2">
-                    <Label>Description détaillée des missions</Label>
-                    <Textarea className="min-h-[150px]" placeholder="Détaillez ce que la personne devra faire..." />
+                    <Label className="dark:text-slate-300">Type de contrat</Label>
+                    <Select onValueChange={setContractType} defaultValue="CDI">
+                        <SelectTrigger className="dark:bg-slate-950 dark:border-slate-700"><SelectValue placeholder="Type de contrat" /></SelectTrigger>
+                        <SelectContent className="dark:bg-slate-950 dark:border-slate-700">
+                            <SelectItem value="CDI">CDI</SelectItem>
+                            <SelectItem value="CDD">CDD</SelectItem>
+                            <SelectItem value="Prestation">Prestation / Freelance</SelectItem>
+                            <SelectItem value="Stage">Stage</SelectItem>
+                        </SelectContent>
+                    </Select>
+                </div>
+
+                <div className="space-y-2">
+                    <Label className="dark:text-slate-300">Description détaillée</Label>
+                    <Textarea 
+                        className="min-h-[150px] dark:bg-slate-950 dark:border-slate-700" 
+                        placeholder="Détails..." 
+                        value={jobDesc}
+                        onChange={e => setJobDesc(e.target.value)}
+                    />
                 </div>
             </div>
 
-            <Separator />
+            <Separator className="dark:bg-slate-800" />
 
-            {/* --- SECTION 3 : EXIGENCES / TAGS (Nouvelle demande) --- */}
+            {/* TAGS */}
             <div className="space-y-4">
-                <h3 className="text-lg font-semibold flex items-center gap-2 text-slate-800">
+                <h3 className="text-lg font-semibold flex items-center gap-2 text-slate-800 dark:text-white">
                     <Tags className="h-4 w-4 text-brand-orange" /> Compétences requises
                 </h3>
                 <div className="space-y-2">
-                    <Label>Tags (séparez les compétences par une virgule)</Label>
+                    <Label className="dark:text-slate-300">Tags (séparés par une virgule)</Label>
                     <Input 
-                        placeholder="Ex: Permis B, Java, Anglais, Maçonnerie" 
+                        className="dark:bg-slate-950 dark:border-slate-700"
+                        placeholder="Ex: Permis B, Java, Maçonnerie" 
                         value={tagsInput}
-                        onChange={(e) => setTagsInput(e.target.value)}
+                        onChange={e => setTagsInput(e.target.value)}
                     />
-                    {/* Le Nuage de Tags s'affiche ici automatiquement */}
                     <div className="flex flex-wrap gap-2 mt-2">
-                        {tagsPreview.length > 0 ? (
-                            tagsPreview.map((tag, idx) => (
-                                <Badge key={idx} variant="secondary" className="bg-slate-100 text-slate-700 hover:bg-slate-200 border border-slate-200">
-                                    {tag}
-                                </Badge>
-                            ))
-                        ) : (
-                            <span className="text-sm text-slate-400 italic">Tapez des mots-clés ci-dessus...</span>
-                        )}
+                        {tagsArray.map((tag, idx) => (
+                            <Badge key={idx} variant="secondary" className="bg-slate-100 dark:bg-slate-800 dark:text-slate-300">
+                                {tag}
+                            </Badge>
+                        ))}
                     </div>
                 </div>
             </div>
 
-            <Separator />
+            <Separator className="dark:bg-slate-800" />
 
             <div className="space-y-2">
-                <Label>Budget / Salaire</Label>
-                <Input placeholder="Ex: 150 000 FCFA" />
+                <Label className="dark:text-slate-300">Budget / Salaire</Label>
+                <Input 
+                    className="dark:bg-slate-950 dark:border-slate-700"
+                    placeholder="Ex: 150 000 FCFA" 
+                    value={salary}
+                    onChange={e => setSalary(e.target.value)}
+                />
             </div>
 
             <Button className="w-full bg-brand-orange text-white text-lg h-12 mt-4 hover:bg-orange-600" onClick={handleSubmit} disabled={isLoading}>
-                {isLoading ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : "Publier l'annonce"}
+                {isLoading ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : "Publier l'annonce pour de vrai"}
             </Button>
 
           </CardContent>
