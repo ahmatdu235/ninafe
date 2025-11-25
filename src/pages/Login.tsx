@@ -61,18 +61,15 @@ export default function Login() {
     }
   };
 
-  // --- C'EST ICI QUE J'AI CORRIGÉ ---
   const handleGoogleLogin = async () => {
     const { error } = await supabase.auth.signInWithOAuth({
       provider: 'google',
       options: {
-        // Cette ligne force la redirection vers le dashboard après Google
         redirectTo: window.location.origin + "/dashboard"
       }
     });
     if (error) alert(error.message);
   };
-  // ----------------------------------
 
   return (
     <div className="flex min-h-screen items-center justify-center bg-slate-50 dark:bg-slate-950 px-4 transition-colors">

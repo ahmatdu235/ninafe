@@ -60,18 +60,15 @@ export default function Register() {
     }
   };
 
-  // --- CORRECTION ICI ---
   const handleGoogleRegister = async () => {
     const { error } = await supabase.auth.signInWithOAuth({
       provider: 'google',
       options: {
-        // On force la redirection vers le dashboard après l'inscription Google
         redirectTo: window.location.origin + "/dashboard"
       }
     });
     if (error) alert(error.message);
   };
-  // ---------------------
 
   return (
     <div className="flex min-h-screen items-center justify-center bg-slate-50 dark:bg-slate-950 px-4 py-8 transition-colors">
