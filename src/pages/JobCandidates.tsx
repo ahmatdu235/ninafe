@@ -1,36 +1,37 @@
+// DANS src/pages/JobCandidates.tsx
+// Assure-toi que ces lignes sont présentes et complètes :
+
+
+import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription } from "@/components/ui/dialog"; 
+// ^^^ Assure-toi que DialogDescription est bien dans les accolades.
 import React, { useState, useEffect } from "react";
 import { useParams, Link, useNavigate } from "react-router-dom";
 import { ArrowLeft, FileText, Mail, User, Loader2, Download, CheckCircle, XCircle } from "lucide-react";
 import { Button } from "@/components/ui/button";
-import { Avatar, AvatarFallback } from "@/components/ui/avatar";
-import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
-import { Badge } from "@/components/ui/badge";
+import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
+import { Card, CardContent } from "@/components/ui/card";
 import { Separator } from "@/components/ui/separator";
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { DashboardHeader } from "@/components/DashboardHeader";
 import { supabase } from "@/lib/supabase";
+import { Badge } from "@/components/ui/badge"; // Import badge
 
 export default function JobCandidates() {
   const { jobId } = useParams<{ jobId: string }>();
-  const navigate = useNavigate();
   const [job, setJob] = useState<any>(null);
   const [candidates, setCandidates] = useState<any[]>([]);
   const [loading, setLoading] = useState(true);
   const [selectedCandidate, setSelectedCandidate] = useState<any>(null);
 
-  // --- NOUVEAU : FONCTION MARQUER COMME LU ---
+  // Fonction pour marquer toutes les candidatures pour cette offre comme lues
   const markApplicationsAsRead = async (jobId: string) => {
-    // On met à jour toutes les candidatures pour cette offre comme 'lues'
+    // On met à jour toutes les lignes de la table `applications`
+    // où `read_by_recruiter` est false.
     await supabase
         .from('applications')
         .update({ read_by_recruiter: true })
-        .eq('job_id', jobId);
-    
-    // Après avoir marqué comme lu, on redirige vers le dashboard pour rafraîchir le compte total de notifications
-    // Le dashboard se rafraîchira tout seul, mais on peut forcer un petit delay pour être sûr
-    setTimeout(() => {
-        // Optionnel: On pourrait rediriger ici pour forcer le rafraîchissement du compte de notifs dans le header
-    }, 500);
+        .eq('job_id', jobId)
+        .eq('read_by_recruiter', false); 
   };
 
   async function fetchCandidates() {
@@ -50,7 +51,7 @@ export default function JobCandidates() {
     
     if (jobData) setJob(jobData);
 
-    // 3. Récupérer les candidatures
+    // 3. Récupérer les candidatures pour cette offre
     const { data: applicationsData, error: applicationsError } = await supabase
         .from('applications')
         .select(`
@@ -144,16 +145,19 @@ export default function JobCandidates() {
 
                                 <Separator orientation="vertical" className="hidden md:block h-auto bg-slate-100 dark:bg-slate-800" />
 
-                                {/* Message et Actions */}
+                                {/* Message et Documents */}
                                 <div className="flex-1 flex flex-col justify-center gap-3">
                                     <p className="text-sm italic text-slate-600 dark:text-slate-300 line-clamp-2">
                                         <Mail className="h-4 w-4 mr-2 inline-block" /> {app.message}
                                     </p>
                                     <div className="flex gap-2">
+                                        <a href={app.cv_url} target="_blank" rel="noreferrer">
+                                            <Button variant="outline" size="sm" className="text-blue-600 border-blue-200 bg-blue-50 dark:bg-blue-900/20 dark:border-blue-900 dark:text-blue-300">
+                                                <Download className="mr-2 h-4 w-4" /> CV
+                                            </Button>
+                                        </a>
+                                        {/* Bouton Voir Profil (pour la modale) - Simulé */}
                                         <Button variant="outline" size="sm" className="dark:bg-slate-800 dark:text-white dark:hover:bg-slate-700 flex items-center gap-2">
-                                            <Download className="mr-2 h-4 w-4" /> CV
-                                        </Button>
-                                        <Button onClick={() => setSelectedCandidate(app)} variant="outline" size="sm" className="dark:bg-slate-800 dark:text-white dark:hover:bg-slate-700 flex items-center gap-2">
                                             <User className="mr-2 h-4 w-4" /> Profil
                                         </Button>
                                     </div>
@@ -171,26 +175,6 @@ export default function JobCandidates() {
                 ))}
             </div>
         )}
-
-        {/* MODALE DÉTAILS */}
-        <Dialog open={!!selectedCandidate} onOpenChange={() => setSelectedCandidate(null)}>
-            <DialogContent className="max-w-2xl dark:bg-slate-900 dark:border-slate-700 dark:text-white">
-                {selectedCandidate && (
-                    <>
-                        <DialogHeader>
-                            <DialogTitle className="text-2xl font-bold text-brand-blue dark:text-white">{selectedCandidate.full_name}</DialogTitle>
-                            <DialogDescription>Statut : {selectedCandidate.status}</DialogDescription>
-                        </DialogHeader>
-                        <div className="space-y-4">
-                            <div className="bg-slate-50 dark:bg-slate-800 p-4 rounded-lg">
-                                <h4 className="font-semibold mb-2 flex items-center gap-2"><Mail className="h-4 w-4" /> Message de motivation</h4>
-                                <p className="text-slate-700 dark:text-slate-300 text-sm leading-relaxed whitespace-pre-wrap">{selectedCandidate.message}</p>
-                            </div>
-                        </div>
-                    </>
-                )}
-            </DialogContent>
-        </Dialog>
       </div>
     </div>
   );
