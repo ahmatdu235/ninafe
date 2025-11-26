@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from "react";
 import { useSearchParams, Link } from "react-router-dom";
-import { Search as SearchIcon, MapPin, Filter, Briefcase, Moon, Sun, Star, ArrowUpDown } from "lucide-react";
+import { Search as SearchIcon, MapPin, Filter, Briefcase, Moon, Sun, Banknote, Star, ArrowUpDown } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Badge } from "@/components/ui/badge";

@@ -12,7 +12,7 @@ import LoginPage from "@/pages/Login";
 import RegisterPage from "@/pages/Register";
 
 // Pages Dashboard
-import CandidateDashboard from "@/pages/CandidateDashboard"; // Supposé exister
+
 import RecruiterDashboard from "@/pages/RecruiterDashboard"; // NOUVEAU
 import JobCandidates from "@/pages/JobCandidates"; // NOUVEAU
 
@@ -92,12 +92,12 @@ export default function App() {
         <Route path="/login" element={<LoginPage {...commonProps} />} />
         <Route path="/register" element={<RegisterPage {...commonProps} />} />
         
-        {/* --- ROUTES CANDIDAT --- */}
         <Route path="/dashboard" element={
-            <ProtectedRoute allowedRole="candidat">
-                <CandidateDashboard {...commonProps} />
-            </ProtectedRoute>
-        } />
+    <ProtectedRoute allowedRole="candidat">
+        {/* On utilise le composant Dashboard existant */}
+        <Dashboard {...commonProps} />
+    </ProtectedRoute>
+} />
         
         {/* --- ROUTES RECRUTEUR (NOUVELLES) --- */}
         <Route path="/dashboard-recruiter" element={
