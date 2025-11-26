@@ -85,7 +85,7 @@ export default function DashboardRecruiter() {
         if (error) alert("Erreur lors de la mise à jour du profil.");
         else {
             alert("Profil mis à jour !");
-            setRecruiterProfile(prev => ({ ...prev, full_name: companyName, bio: companyDesc }));
+           setRecruiterProfile((prev: any) => ({ ...prev, full_name: companyName, bio: companyDesc }));
             setIsModalOpen(false);
         }
         setUpdating(false);
