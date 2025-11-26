@@ -1,20 +1,14 @@
-// DANS src/pages/JobCandidates.tsx
-// Assure-toi que ces lignes sont présentes et complètes :
-
-
-import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription } from "@/components/ui/dialog"; 
-// ^^^ Assure-toi que DialogDescription est bien dans les accolades.
 import React, { useState, useEffect } from "react";
 import { useParams, Link, useNavigate } from "react-router-dom";
 import { ArrowLeft, FileText, Mail, User, Loader2, Download, CheckCircle, XCircle } from "lucide-react";
 import { Button } from "@/components/ui/button";
-import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
-import { Card, CardContent } from "@/components/ui/card";
+import { Avatar, AvatarFallback } from "@/components/ui/avatar";
+import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
 import { Separator } from "@/components/ui/separator";
-
+import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription } from "@/components/ui/dialog";
 import { DashboardHeader } from "@/components/DashboardHeader";
 import { supabase } from "@/lib/supabase";
-import { Badge } from "@/components/ui/badge"; // Import badge
+import { Badge } from "@/components/ui/badge";
 
 export default function JobCandidates() {
   const { jobId } = useParams<{ jobId: string }>();
@@ -23,15 +17,13 @@ export default function JobCandidates() {
   const [loading, setLoading] = useState(true);
   const [selectedCandidate, setSelectedCandidate] = useState<any>(null);
 
-  // Fonction pour marquer toutes les candidatures pour cette offre comme lues
+  // --- NOUVEAU : FONCTION MARQUER COMME LU ---
   const markApplicationsAsRead = async (jobId: string) => {
-    // On met à jour toutes les lignes de la table `applications`
-    // où `read_by_recruiter` est false.
+    // On met à jour toutes les candidatures pour cette offre comme 'lues'
     await supabase
         .from('applications')
         .update({ read_by_recruiter: true })
-        .eq('job_id', jobId)
-        .eq('read_by_recruiter', false); 
+        .eq('job_id', jobId);
   };
 
   async function fetchCandidates() {
@@ -51,7 +43,7 @@ export default function JobCandidates() {
     
     if (jobData) setJob(jobData);
 
-    // 3. Récupérer les candidatures pour cette offre
+    // 3. Récupérer les candidatures (avec jointure sur les profils pour le nom)
     const { data: applicationsData, error: applicationsError } = await supabase
         .from('applications')
         .select(`
@@ -156,8 +148,7 @@ export default function JobCandidates() {
                                                 <Download className="mr-2 h-4 w-4" /> CV
                                             </Button>
                                         </a>
-                                        {/* Bouton Voir Profil (pour la modale) - Simulé */}
-                                        <Button variant="outline" size="sm" className="dark:bg-slate-800 dark:text-white dark:hover:bg-slate-700 flex items-center gap-2">
+                                        <Button onClick={() => setSelectedCandidate(app)} variant="outline" size="sm" className="dark:bg-slate-800 dark:text-white dark:hover:bg-slate-700 flex items-center gap-2">
                                             <User className="mr-2 h-4 w-4" /> Profil
                                         </Button>
                                     </div>
@@ -175,6 +166,38 @@ export default function JobCandidates() {
                 ))}
             </div>
         )}
+
+        {/* MODALE DÉTAILS */}
+        <Dialog open={!!selectedCandidate} onOpenChange={() => setSelectedCandidate(null)}>
+            <DialogContent className="max-w-2xl dark:bg-slate-900 dark:border-slate-700 dark:text-white">
+                {selectedCandidate && (
+                    <>
+                        <DialogHeader>
+                            <DialogTitle className="text-2xl font-bold text-brand-blue dark:text-white">{selectedCandidate.full_name}</DialogTitle>
+                            <DialogDescription>Statut : {selectedCandidate.status}</DialogDescription>
+                        </DialogHeader>
+                        <div className="space-y-4 mt-4">
+                            <div className="bg-slate-50 dark:bg-slate-800 p-4 rounded-lg">
+                                <h4 className="font-semibold mb-2 flex items-center gap-2"><Mail className="h-4 w-4" /> Message de motivation</h4>
+                                <p className="text-slate-700 dark:text-slate-300 text-sm leading-relaxed whitespace-pre-wrap">{selectedCandidate.message}</p>
+                            </div>
+                            <div>
+                                <h4 className="font-semibold mb-3 flex items-center gap-2"><FileText className="h-4 w-4" /> Documents</h4>
+                                <a href={selectedCandidate.cv_url} target="_blank" rel="noreferrer" className="inline-block">
+                                    <div className="border dark:border-slate-700 p-3 rounded flex items-center gap-3 cursor-pointer hover:bg-slate-50 dark:hover:bg-slate-800">
+                                        <div className="bg-red-100 p-2 rounded text-red-600"><FileText /></div>
+                                        <div>
+                                            <p className="font-bold text-sm">Curriculum Vitae</p>
+                                            <p className="text-xs text-slate-500">Cliquez pour télécharger</p>
+                                        </div>
+                                    </div>
+                                </a>
+                            </div>
+                        </div>
+                    </>
+                )}
+            </DialogContent>
+        </Dialog>
       </div>
     </div>
   );

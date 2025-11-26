@@ -1,120 +1,166 @@
-import React, { useState, useEffect } from "react";
-import { Link, useParams } from "react-router-dom";
-import { ArrowLeft, MapPin, Building2, Banknote, Calendar, CheckCircle, Moon, Sun, Menu, Briefcase, Heart, Star, ExternalLink } from "lucide-react";
+import React, { useState } from "react";
+import { useParams, Link } from "react-router-dom";
+import { MapPin, Briefcase, Clock, DollarSign, ChevronLeft, Heart, Share2, Phone, Mail, Globe } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
-import { Card, CardContent } from "@/components/ui/card";
 import { Separator } from "@/components/ui/separator";
-import { ApplyDialog } from "@/components/ApplyDialog"; 
-import { supabase } from "@/lib/supabase";
+import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+import { ApplyDialog } from "@/components/ApplyDialog";
+import { AppHeader } from "@/components/AppHeader"; // NOUVEAU
 
-export default function JobDetails() {
-  const { id } = useParams();
-  const [isSaved, setIsSaved] = useState(false);
-  const [isDark, setIsDark] = useState(() => localStorage.getItem("theme") === "dark");
-  
-  // --- DONNÉES DYNAMIQUES ---
-  const [job, setJob] = useState<any>(null);
-  const [loading, setLoading] = useState(true);
+// Types des props passées par App.tsx
+interface JobDetailsProps {
+    isLoggedIn: boolean;
+    userRole: string | null;
+    isDark: boolean;
+    setIsDark: (dark: boolean) => void;
+}
 
-  useEffect(() => {
-    if (isDark) { document.documentElement.classList.add("dark"); localStorage.setItem("theme", "dark"); }
-    else { document.documentElement.classList.remove("dark"); localStorage.setItem("theme", "light"); }
-
-    async function fetchJob() {
-        const { data, error } = await supabase
-            .from('jobs')
-            .select('*')
-            .eq('id', id) // On cherche l'offre avec l'ID de l'URL
-            .single();
-        
-        if (data) setJob(data);
-        setLoading(false);
+// Données statiques pour la simulation
+const mockJob = {
+    id: 1,
+    title: "Développeur Web Full-Stack (Senior)",
+    company: "Tchad Numérique",
+    companyId: 101,
+    location: "N'Djamena (Centre)",
+    type: "CDI",
+    budget: "700 000 - 900 000 FCFA/mois",
+    posted: "Publié il y a 3 jours",
+    description: "Nous recherchons un développeur Full-Stack passionné et expérimenté pour rejoindre notre équipe agile. Vous travaillerez sur des projets innovants allant de la refonte de sites à la création d'applications mobiles. Une excellente maîtrise de React, Node.js et de Supabase est essentielle. Le candidat idéal est autonome et capable de mener un projet de A à Z.",
+    requirements: [
+        "5+ années d'expérience en développement Full-Stack.",
+        "Maîtrise de JavaScript/TypeScript, React, et Node.js.",
+        "Expérience avec les bases de données SQL (PostgreSQL/Supabase).",
+        "Capacité à travailler en équipe et à gérer les délais.",
+        "Bac +5 en Informatique ou équivalent."
+    ],
+    benefits: [
+        "Assurance santé premium.",
+        "Jours de télétravail flexibles.",
+        "Budget formation annuel.",
+        "Un environnement de travail stimulant."
+    ],
+    tags: ["React", "Node.js", "TypeScript", "Supabase", "API REST", "Agile"],
+    contactInfo: {
+        phone: "+235 66 12 34 56",
+        email: "rh@tchadnumerique.com",
+        website: "https://tchadnumerique.com"
     }
-    fetchJob();
-  }, [id, isDark]);
+};
 
-  if (loading) return <div className="p-8 text-center">Chargement de l'offre...</div>;
-  if (!job) return <div className="p-8 text-center">Offre introuvable.</div>;
+const mockCompany = {
+    name: "Tchad Numérique",
+    description: "Tchad Numérique est une société de services numériques leader au Tchad, spécialisée dans la transformation digitale des entreprises locales et internationales. Notre mission est d'apporter des solutions technologiques adaptées au contexte africain.",
+    jobsCount: 5,
+    sector: "IT & Services",
+    location: "N'Djamena",
+    logoFallback: "TN"
+}
 
-  return (
-    <div className="min-h-screen bg-slate-50 dark:bg-slate-950 font-sans text-slate-900 dark:text-slate-100 transition-colors">
-      {/* HEADER (Simplifié) */}
-      <header className="sticky top-0 z-50 w-full border-b bg-white dark:bg-slate-950 dark:border-slate-800 shadow-sm transition-colors">
-        <div className="container mx-auto flex h-16 items-center justify-between px-4 md:px-6">
-          <Link to="/" className="flex items-center gap-2">
-            <div className="flex h-8 w-8 items-center justify-center rounded-md bg-brand-blue text-brand-orange font-bold text-xl">N</div>
-            <span className="text-xl font-bold tracking-tight text-brand-blue dark:text-white">Ninafe</span>
-          </Link>
-          <div className="flex items-center gap-3">
-             <Button variant="ghost" size="icon" onClick={() => setIsDark(!isDark)}>{isDark ? <Sun className="h-5 w-5 text-yellow-500" /> : <Moon className="h-5 w-5 text-slate-600" />}</Button>
-             <Link to="/login"><Button variant="ghost">Connexion</Button></Link>
-          </div>
-        </div>
-      </header>
+export default function JobDetails(props: JobDetailsProps) { // Réception des props
+    const { id } = useParams();
+    const [isFavorite, setIsFavorite] = useState(false);
 
-      <div className="py-8">
-        <div className="container mx-auto px-4 mb-6">
-            <Link to="/search" className="inline-flex items-center text-slate-500 hover:text-brand-blue dark:text-slate-400 dark:hover:text-brand-orange">
-            <ArrowLeft className="mr-2 h-4 w-4" /> Retour aux offres
-            </Link>
-        </div>
+    // En réalité, on ferait un fetch ici avec 'id'
+    const job = mockJob;
+    const company = mockCompany;
 
-        <div className="container mx-auto px-4 grid gap-6 md:grid-cols-3 max-w-6xl">
-            <div className="md:col-span-2 space-y-6">
-                <Card className="border-t-4 border-t-brand-orange shadow-sm dark:bg-slate-900 dark:border-slate-800">
-                    <CardContent className="p-6">
-                        <div className="flex flex-col md:flex-row justify-between items-start mb-4 gap-4">
-                            <div>
-                                <h1 className="text-2xl md:text-3xl font-bold text-brand-blue dark:text-white mb-2">{job.title}</h1>
-                                <div className="flex items-center gap-2 text-slate-600 dark:text-slate-300 font-medium text-lg">
-                                    <Building2 className="h-5 w-5 text-brand-orange" /> {job.company_name}
+    if (!job) {
+        return <div className="p-8 text-center dark:text-white">Offre non trouvée.</div>;
+    }
+
+    return (
+        <div className="min-h-screen bg-slate-50 dark:bg-slate-950 font-sans text-slate-900 dark:text-slate-100">
+            
+            {/* --- NOUVEAU HEADER DYNAMIQUE --- */}
+            <AppHeader {...props} type="public" />
+
+            <div className="container mx-auto px-4 py-8 md:py-12">
+                <Link to="/search" className="inline-flex items-center text-brand-blue hover:text-brand-orange mb-6 text-sm dark:text-slate-300 dark:hover:text-brand-orange">
+                    <ChevronLeft className="h-4 w-4 mr-1" /> Retour aux résultats
+                </Link>
+
+                <div className="grid grid-cols-1 lg:grid-cols-3 gap-8">
+                    
+                    {/* Colonne Principale: Détails de l'Offre */}
+                    <div className="lg:col-span-2 space-y-8">
+                        <Card className="dark:bg-slate-900 dark:border-slate-800">
+                            <CardHeader className="space-y-4">
+                                <div className="flex items-center justify-between">
+                                    <h1 className="text-3xl font-extrabold text-brand-blue dark:text-white">{job.title}</h1>
+                                    <Button variant="ghost" size="icon" onClick={() => setIsFavorite(!isFavorite)} className={`hover:bg-red-50 dark:hover:bg-red-900/20 ${isFavorite ? 'text-red-500' : 'text-slate-400'}`}>
+                                        <Heart className={`h-6 w-6 ${isFavorite ? 'fill-red-500' : ''}`} />
+                                    </Button>
                                 </div>
-                            </div>
-                            <Badge className="text-sm px-3 py-1 bg-brand-blue hover:bg-slate-700 dark:text-white">{job.type}</Badge>
-                        </div>
-                        <div className="flex flex-wrap gap-4 text-sm text-slate-500 dark:text-slate-400 mb-6">
-                            <span className="flex items-center gap-1"><MapPin className="h-4 w-4" /> {job.location}</span>
-                            <span className="flex items-center gap-1"><Banknote className="h-4 w-4" /> {job.salary}</span>
-                            <span className="flex items-center gap-1"><Calendar className="h-4 w-4" /> {new Date(job.created_at).toLocaleDateString()}</span>
-                        </div>
-                        <Separator className="mb-6 dark:bg-slate-800" />
-                        
-                        {/* Description */}
-                        <div>
-                            <h3 className="font-semibold text-slate-900 dark:text-white mb-3 text-lg">Description</h3>
-                            <div className="text-slate-700 dark:text-slate-300 leading-relaxed whitespace-pre-line text-base">{job.description}</div>
-                        </div>
-                    </CardContent>
-                </Card>
+                                <div className="flex flex-wrap items-center gap-4 text-slate-600 dark:text-slate-400 text-sm">
+                                    <span className="flex items-center gap-1"><MapPin className="h-4 w-4" /> {job.location}</span>
+                                    <span className="flex items-center gap-1"><Briefcase className="h-4 w-4" /> {job.type}</span>
+                                    <span className="flex items-center gap-1 font-semibold text-brand-orange"><DollarSign className="h-4 w-4" /> {job.budget}</span>
+                                    <span className="text-xs ml-auto">{job.posted}</span>
+                                </div>
+                                <div className="flex flex-wrap gap-2">
+                                    {job.tags.map(tag => <Badge key={tag} variant="secondary" className="dark:bg-slate-800 dark:text-slate-300">{tag}</Badge>)}
+                                </div>
+                            </CardHeader>
+                            <CardContent className="space-y-6">
+                                <Separator className="dark:bg-slate-800" />
+                                
+                                <h2 className="text-xl font-bold dark:text-white">Description du poste</h2>
+                                <p className="text-slate-700 dark:text-slate-300 whitespace-pre-line">{job.description}</p>
 
-                {/* Carte Entreprise */}
-                <Card className="shadow-sm dark:bg-slate-900 dark:border-slate-800">
-                    <CardContent className="p-6">
-                        <h3 className="font-semibold text-lg text-slate-900 dark:text-white mb-3">À propos de {job.company_name}</h3>
-                        <p className="text-slate-600 dark:text-slate-300 leading-relaxed">{job.company_description || "Aucune description disponible."}</p>
-                    </CardContent>
-                </Card>
-            </div>
+                                <h2 className="text-xl font-bold dark:text-white">Compétences requises</h2>
+                                <ul className="list-disc pl-5 space-y-2 text-slate-700 dark:text-slate-300">
+                                    {job.requirements.map((req, index) => <li key={index}>{req}</li>)}
+                                </ul>
 
-            {/* Sidebar */}
-            <div className="md:col-span-1">
-                <Card className="sticky top-24 shadow-md border-brand-blue/10 dark:bg-slate-900 dark:border-slate-800">
-                    <CardContent className="p-6 space-y-6">
-                        <div>
-                            <h3 className="font-bold text-lg text-center text-slate-800 dark:text-white mb-2">Ce poste vous intéresse ?</h3>
-                            <p className="text-center text-sm text-slate-500 dark:text-slate-400">N'attendez plus, envoyez votre candidature dès maintenant.</p>
-                        </div>
-                        <div className="w-full flex justify-center">
-                            <div className="w-full">
-                               <ApplyDialog  jobTitle={job.title}  companyName={job.company_name}  jobId={job.id} />     
-                            </div>
-                        </div>
-                    </CardContent>
-                </Card>
+                                <h2 className="text-xl font-bold dark:text-white">Avantages</h2>
+                                <ul className="list-disc pl-5 space-y-2 text-slate-700 dark:text-slate-300">
+                                    {job.benefits.map((ben, index) => <li key={index}>{ben}</li>)}
+                                </ul>
+
+                                <div className="pt-4 flex flex-col sm:flex-row gap-4">
+                                    <ApplyDialog jobTitle={job.title} companyName={job.company} />
+                                    <Button variant="outline" className="flex items-center gap-2 dark:border-slate-700 dark:text-slate-300 dark:hover:bg-slate-800">
+                                        <Share2 className="h-4 w-4" /> Partager
+                                    </Button>
+                                </div>
+                            </CardContent>
+                        </Card>
+                    </div>
+
+                    {/* Colonne Latérale: Infos Entreprise */}
+                    <div className="lg:col-span-1 space-y-8">
+                        <Card className="dark:bg-slate-900 dark:border-slate-800">
+                            <CardHeader>
+                                <div className="flex items-center gap-4 mb-3">
+                                    <div className="h-12 w-12 rounded-lg bg-brand-blue/10 dark:bg-brand-blue/20 text-brand-blue dark:text-brand-orange flex items-center justify-center text-xl font-bold">{company.logoFallback}</div>
+                                    <CardTitle className="text-xl font-bold text-brand-blue dark:text-white">{company.name}</CardTitle>
+                                </div>
+                                <p className="text-sm text-slate-600 dark:text-slate-400 line-clamp-3">{company.description}</p>
+                            </CardHeader>
+                            <CardContent className="space-y-4">
+                                <Link to={`/company/${company.companyId}`} className="text-brand-orange font-medium hover:underline text-sm">
+                                    Voir le profil complet ({company.jobsCount} offres) &rarr;
+                                </Link>
+                                <Separator className="dark:bg-slate-800" />
+                                <div className="space-y-2">
+                                    <p className="flex items-center gap-2 text-sm text-slate-700 dark:text-slate-300"><Briefcase className="h-4 w-4 text-slate-500" /> {company.sector}</p>
+                                    <p className="flex items-center gap-2 text-sm text-slate-700 dark:text-slate-300"><MapPin className="h-4 w-4 text-slate-500" /> {company.location}</p>
+                                </div>
+                                
+                                <Separator className="dark:bg-slate-800" />
+
+                                <div className="space-y-3">
+                                    <h3 className="font-semibold dark:text-white">Contacter l'entreprise</h3>
+                                    <p className="text-sm text-slate-700 dark:text-slate-300 flex items-center gap-2"><Phone className="h-4 w-4 text-slate-500" /> {job.contactInfo.phone}</p>
+                                    <p className="text-sm text-slate-700 dark:text-slate-300 flex items-center gap-2"><Mail className="h-4 w-4 text-slate-500" /> {job.contactInfo.email}</p>
+                                    <p className="text-sm text-slate-700 dark:text-slate-300 flex items-center gap-2"><Globe className="h-4 w-4 text-slate-500" /> <a href={job.contactInfo.website} target="_blank" rel="noopener noreferrer" className="hover:underline">{job.contactInfo.website.replace('https://', '')}</a></p>
+                                </div>
+                            </CardContent>
+                        </Card>
+                    </div>
+                </div>
             </div>
         </div>
-      </div>
-    </div>
-  );
+    );
 }

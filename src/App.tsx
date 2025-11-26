@@ -1,93 +1,118 @@
-import { useEffect, useState } from "react";
-import { Routes, Route, useNavigate } from "react-router-dom";
-import Home from "@/pages/Home";
-import Login from "@/pages/Login";
-import Register from "@/pages/Register";
-import SearchPage from "@/pages/Search";
-import Dashboard from "@/pages/Dashboard";
-import DashboardRecruiter from "@/pages/DashboardRecruiter";
-import PostJob from "@/pages/PostJob";
-import JobCandidates from "@/pages/JobCandidates";
-import JobDetails from "@/pages/JobDetails";
-import CompanyProfile from "@/pages/CompanyProfile";
-import Favorites from "@/pages/Favorites";
-import Messages from "@/pages/Messages";
-import Onboarding from "@/pages/Onboarding"; 
+import React, { useState, useEffect } from "react";
+import { BrowserRouter, Routes, Route, Navigate } from "react-router-dom";
 import { supabase } from "@/lib/supabase";
 import { Loader2 } from "lucide-react";
 
-function App() {
-  const navigate = useNavigate();
-  const [initialLoading, setInitialLoading] = useState(true);
+// Pages publiques
+import HomePage from "@/pages/Home";
+import SearchPage from "@/pages/Search";
+import JobDetails from "@/pages/JobDetails";
+import CompanyProfile from "@/pages/CompanyProfile";
+import LoginPage from "@/pages/Login";
+import RegisterPage from "@/pages/Register";
 
-  // --- LOGIQUE SIMPLIFIÉE ET DÉBLOQUÉE ---
-  const handleSessionCheck = async (session: any) => {
-    // Le loader doit s'arrêter avant tout le reste, qu'il y ait erreur ou non.
-    setInitialLoading(false); 
-    
-    if (session) {
-      // Si l'utilisateur est connecté, on l'envoie vers le dashboard par défaut, 
-      // et on laisse les composants individuels Dashboard faire leur propre vérification de rôle.
-      if (window.location.pathname === '/login' || window.location.pathname === '/register' || window.location.pathname === '/onboarding') {
-          navigate('/dashboard'); 
+// Pages Dashboard
+import CandidateDashboard from "@/pages/CandidateDashboard"; // Supposé exister
+import RecruiterDashboard from "@/pages/RecruiterDashboard"; // NOUVEAU
+import JobCandidates from "@/pages/JobCandidates"; // NOUVEAU
+
+export default function App() {
+  const [isDark, setIsDark] = useState(false);
+  const [isLoggedIn, setIsLoggedIn] = useState(false);
+  const [userRole, setUserRole] = useState<string | null>(null);
+  const [loading, setLoading] = useState(true);
+  
+  // --- ÉTAT DE SIMULATION POUR LES NOTIFICATIONS RECRUTEUR ---
+  // Le recruteur verra un badge "3" sur la cloche de notification.
+  const [unreadNotifications, setUnreadNotifications] = useState(3); 
+
+  useEffect(() => {
+    // 1. Initialiser le thème
+    const root = window.document.documentElement;
+    root.classList.remove(isDark ? "light" : "dark");
+    root.classList.add(isDark ? "dark" : "light");
+
+    // 2. Vérification de l'état de la session (simplifié pour la démo)
+    const checkSession = async () => {
+      const { data: { session } } = await supabase.auth.getSession();
+
+      if (session) {
+        setIsLoggedIn(true);
+        // Utilisation de localStorage pour simuler la persistance du rôle
+        // NOTE: En production, le rôle devrait être vérifié via la DB ou les claims JWT.
+        const storedRole = localStorage.getItem('userRole');
+        setUserRole(storedRole || 'candidat'); 
+      } else {
+        setIsLoggedIn(false);
+        setUserRole(null);
       }
-    } else {
-      // Si l'utilisateur est déconnecté, on le renvoie à l'accueil ou au login
-      if (window.location.pathname.startsWith('/dashboard') || window.location.pathname === '/post-job') {
-          navigate('/login');
-      }
+      setLoading(false);
+    };
+
+    checkSession();
+  }, [isDark]);
+
+  // Props communes passées à tous les composants de page
+  const commonProps = {
+    isLoggedIn,
+    setIsLoggedIn,
+    userRole,
+    setUserRole,
+    isDark,
+    setIsDark,
+    unreadNotifications, // Passé à toutes les pages pour le Header
+  };
+  
+  // Composant de route protégée (vérifie la connexion et le rôle)
+  const ProtectedRoute = ({ children, allowedRole }: { children: React.ReactNode, allowedRole: string | null }) => {
+    if (loading) {
+        return (
+            <div className="flex min-h-screen items-center justify-center bg-slate-50 dark:bg-slate-950">
+                <Loader2 className="h-10 w-10 animate-spin mx-auto text-brand-orange" />
+            </div>
+        );
     }
+    
+    if (!isLoggedIn || (allowedRole && userRole !== allowedRole)) {
+      return <Navigate to="/login" replace />;
+    }
+
+    return children;
   };
 
-  
-  useEffect(() => {
-    // Vérification initiale : on regarde si une session existe
-    supabase.auth.getSession().then(({ data: { session } }) => {
-        handleSessionCheck(session); 
-    });
-
-    // Listener pour les changements d'état (Login/Logout)
-    const { data: authListener } = supabase.auth.onAuthStateChange((event, session) => {
-      if (event === 'SIGNED_IN' || event === 'SIGNED_OUT') {
-        handleSessionCheck(session);
-      }
-    });
-
-    return () => {
-      authListener.subscription.unsubscribe();
-    };
-  }, [navigate]);
-  
-  // Afficher un loader le temps de vérifier la session au démarrage
-  if (initialLoading) {
-      return (
-          <div className="flex min-h-screen items-center justify-center bg-slate-50 dark:bg-slate-950">
-              <Loader2 className="h-10 w-10 text-brand-orange animate-spin" />
-              <p className="ml-4 text-brand-blue dark:text-white">Chargement de la session...</p>
-          </div>
-      );
-  }
-
   return (
-    <Routes>
-      <Route path="/" element={<Home />} />
-      <Route path="/login" element={<Login />} />
-      <Route path="/register" element={<Register />} />
-      <Route path="/search" element={<SearchPage />} />
-      
-      <Route path="/onboarding" element={<Onboarding />} /> 
-
-      <Route path="/dashboard" element={<Dashboard />} /> 
-      <Route path="/dashboard-recruiter" element={<DashboardRecruiter />} />
-      <Route path="/post-job" element={<PostJob />} />
-      <Route path="/job-candidates/:jobId" element={<JobCandidates />} />
-      <Route path="/messages" element={<Messages />} />
-      <Route path="/favorites" element={<Favorites />} />
-
-      <Route path="/job/:id" element={<JobDetails />} />
-      <Route path="/company/:id" element={<CompanyProfile />} />
-    </Routes>
+    <BrowserRouter>
+      <Routes>
+        
+        {/* --- ROUTES PUBLIQUES (Ouvertes à tous) --- */}
+        <Route path="/" element={<HomePage {...commonProps} />} />
+        <Route path="/search" element={<SearchPage {...commonProps} />} />
+        <Route path="/job/:id" element={<JobDetails {...commonProps} />} />
+        <Route path="/company/:id" element={<CompanyProfile {...commonProps} />} />
+        <Route path="/login" element={<LoginPage {...commonProps} />} />
+        <Route path="/register" element={<RegisterPage {...commonProps} />} />
+        
+        {/* --- ROUTES CANDIDAT --- */}
+        <Route path="/dashboard" element={
+            <ProtectedRoute allowedRole="candidat">
+                <CandidateDashboard {...commonProps} />
+            </ProtectedRoute>
+        } />
+        
+        {/* --- ROUTES RECRUTEUR (NOUVELLES) --- */}
+        <Route path="/dashboard-recruiter" element={
+            <ProtectedRoute allowedRole="recruteur">
+                <RecruiterDashboard {...commonProps} />
+            </ProtectedRoute>
+        } />
+        
+        <Route path="/job-candidates/:jobId" element={
+            <ProtectedRoute allowedRole="recruteur">
+                <JobCandidates {...commonProps} />
+            </ProtectedRoute>
+        } />
+        
+      </Routes>
+    </BrowserRouter>
   );
 }
-
-export default App;

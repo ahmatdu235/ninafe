@@ -1,18 +1,12 @@
-import React, { useState, useEffect } from "react";
+import React, { useState } from "react";
 import { Link, useNavigate } from "react-router-dom";
 import { LogOut, User, Menu, Bell } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Sheet, SheetContent, SheetHeader, SheetTitle, SheetTrigger } from "@/components/ui/sheet";
 import { supabase } from "@/lib/supabase";
+import { ModeToggle } from "@/components/mode-toggle";
 import { Avatar, AvatarFallback } from "@/components/ui/avatar";
 import { Badge } from "@/components/ui/badge";
-
-
-// DANS DashboardHeader.tsx, ajoutez ce bloc après le dernier import :
-function ModeToggle() {
-    // Le bouton est géré par la logique du DashboardHeader lui-même
-    return null;
-}
 
 // Ajout de la prop unreadNotifications
 interface DashboardHeaderProps {
@@ -69,14 +63,15 @@ export function DashboardHeader({ type, unreadNotifications = 0 }: DashboardHead
           
           {/* Icône de Notification avec Badge */}
           {type === "recruteur" && (
-            <div className="relative cursor-pointer text-slate-600 dark:text-slate-300 hover:text-brand-orange">
+            <Link to="/job-candidates/1" className="relative cursor-pointer text-slate-600 dark:text-slate-300 hover:text-brand-orange" title="Nouvelles Candidatures">
                 <Bell className="h-5 w-5" />
                 {unreadNotifications > 0 && (
+                    // Ce badge affiche le nombre réel de notifications non lues
                     <Badge variant="destructive" className="absolute top-[-5px] right-[-5px] h-4 w-4 p-0 flex items-center justify-center rounded-full text-xs">
                         {unreadNotifications}
                     </Badge>
                 )}
-            </div>
+            </Link>
           )}
 
           <ModeToggle />
