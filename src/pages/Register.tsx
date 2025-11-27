@@ -21,7 +21,19 @@ import {
 } from "@/components/ui/select";
 import { supabase } from "@/lib/supabase";
 
-export default function Register() {
+// --- INTERFACE OBLIGATOIRE POUR LE BUILD ---
+interface CommonPageProps {
+    isLoggedIn: boolean;
+    userRole: string | null;
+    id: string | null;
+    isDark: boolean;
+    setIsDark: (dark: boolean) => void;
+    setIsLoggedIn: (status: boolean) => void;
+    setUserRole: (role: string | null) => void;
+    unreadNotifications: number;
+}
+
+export default function Register(props: CommonPageProps) { // <--- ACCEPTE LES PROPS
   const navigate = useNavigate();
   
   const [isLoading, setIsLoading] = useState(false);
