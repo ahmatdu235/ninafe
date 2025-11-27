@@ -1,44 +1,48 @@
-// DANS src/pages/JobCandidates.tsx (Remplace le bloc d'imports)
+// DANS src/pages/JobCandidates.tsx (Remplace TOUT le contenu)
 
 import React, { useState, useEffect } from "react";
 import { useParams, Link, useNavigate } from "react-router-dom";
 import { ArrowLeft, FileText, Mail, User, Loader2, Download, CheckCircle, XCircle } from "lucide-react";
 import { Button } from "@/components/ui/button";
-import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar"; // <-- FIX AVATARIMAGE
+import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar"; // FIX: AvatarImage importé
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
 import { Separator } from "@/components/ui/separator";
-import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription } from "@/components/ui/dialog"; // <-- FIX DIALOGDESCRIPTION
+import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription } from "@/components/ui/dialog"; // FIX: DialogDescription importé
 import { DashboardHeader } from "@/components/DashboardHeader";
 import { supabase } from "@/lib/supabase";
 import { Badge } from "@/components/ui/badge";
 
-// ... (le reste du code est inchangé)
+// --- INTERFACE DE PROPS COMPLETE (Pour résoudre TS2739) ---
+interface JobCandidatesProps {
+    isLoggedIn: boolean;
+    userRole: string | null;
+    isDark: boolean;
+    setIsDark: (dark: boolean) => void;
+    unreadNotifications: number;
+}
 
-export default function JobCandidates() {
+export default function JobCandidates(props: JobCandidatesProps) { // ACCEPTE LES PROPS
   const { jobId } = useParams<{ jobId: string }>();
   const [job, setJob] = useState<any>(null);
   const [candidates, setCandidates] = useState<any[]>([]);
   const [loading, setLoading] = useState(true);
   const [selectedCandidate, setSelectedCandidate] = useState<any>(null);
 
-  // --- NOUVEAU : FONCTION MARQUER COMME LU ---
   const markApplicationsAsRead = async (jobId: string) => {
-    // On met à jour toutes les candidatures pour cette offre comme 'lues'
     await supabase
         .from('applications')
         .update({ read_by_recruiter: true })
-        .eq('job_id', jobId);
+        .eq('job_id', jobId)
+        .eq('read_by_recruiter', false); 
   };
 
   async function fetchCandidates() {
     setLoading(true);
     
-    // 1. MARQUER COMME LU (Dès que le recruteur ouvre la page)
     if (jobId) {
         await markApplicationsAsRead(jobId);
     }
 
-    // 2. Récupérer les détails de l'offre
     const { data: jobData } = await supabase
         .from('jobs')
         .select('*')
@@ -47,7 +51,6 @@ export default function JobCandidates() {
     
     if (jobData) setJob(jobData);
 
-    // 3. Récupérer les candidatures (avec jointure sur les profils pour le nom)
     const { data: applicationsData, error: applicationsError } = await supabase
         .from('applications')
         .select(`
@@ -67,10 +70,8 @@ export default function JobCandidates() {
   }, [jobId]);
 
   const updateStatus = async (id: number, newStatus: string) => {
-      // Mettre à jour le statut dans la base (Accepté/Refusé)
       const { error } = await supabase.from('applications').update({ status: newStatus }).eq('id', id);
       if (!error) {
-          // Mise à jour locale pour que l'interface change tout de suite
           setCandidates(candidates.map(c => c.id === id ? { ...c, status: newStatus } : c));
       }
   };
@@ -96,7 +97,14 @@ export default function JobCandidates() {
 
   return (
     <div className="min-h-screen bg-slate-50 dark:bg-slate-950 dark:text-slate-100 font-sans text-slate-900 transition-colors">
-      <DashboardHeader type="recruteur" isDark={commonProps.isDark} setIsDark={commonProps.setIsDark} />
+      
+      {/* CORRIGÉ : Passe les props de Dark Mode au Header */}
+      <DashboardHeader 
+          type="recruteur" 
+          isDark={props.isDark} 
+          setIsDark={props.setIsDark} 
+          unreadNotifications={props.unreadNotifications} 
+      /> 
 
       <div className="container mx-auto px-4 py-8 max-w-5xl">
         <div className="flex items-center justify-between mb-6">
@@ -178,7 +186,7 @@ export default function JobCandidates() {
                     <>
                         <DialogHeader>
                             <DialogTitle className="text-2xl font-bold text-brand-blue dark:text-white">{selectedCandidate.full_name}</DialogTitle>
-                            <DialogDescription>Statut : {selectedCandidate.status}</DialogDescription>
+                            <DialogDescription className="dark:text-slate-400">Statut : {selectedCandidate.status}</DialogDescription>
                         </DialogHeader>
                         <div className="space-y-4 mt-4">
                             <div className="bg-slate-50 dark:bg-slate-800 p-4 rounded-lg">
