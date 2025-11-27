@@ -5,10 +5,11 @@
     { "path": "./tsconfig.node.json" }
   ],
   "compilerOptions": {
-    "baseUrl": ".",
+    "baseUrl": ".", 
     "paths": {
-      "@/*": ["./src/*"]
+      "@/*": ["src/*"] 
     },
+    // ... Le reste de tes options (type: module, noUnusedLocals: false, etc.)
   }
 }
 

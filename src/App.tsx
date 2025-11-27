@@ -17,7 +17,7 @@ import RecruiterDashboard from "@/pages/RecruiterDashboard";
 import JobCandidates from "@/pages/JobCandidates"; 
 import Onboarding from "@/pages/Onboarding"; // Ajout de l'Onboarding si nécessaire
 import Messages from "@/pages/Messages"; // Ajout de Messages
-import Favorites from "@/pages/pages/Favorites"; // Ajout de Favorites
+import Favorites from "@/pages/Favorites"; // <-- CORRECTION : un seul /pages
 
 // Le composant AppHeader est supposé être importé ici mais il est géré dans le rendu.
 
