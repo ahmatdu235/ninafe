@@ -1,3 +1,4 @@
+
 // DANS src/pages/JobCandidates.tsx (Remplace le bloc d'imports actuel)
 
 import React, { useState, useEffect } from "react";
