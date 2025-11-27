@@ -1,20 +1,22 @@
 import React, { useState } from "react";
 import { Link, useNavigate } from "react-router-dom";
-import { LogOut, User, Menu, Bell } from "lucide-react";
+import { LogOut, User, Menu, Bell, Sun, Moon } from "lucide-react"; // Import Sun/Moon
 import { Button } from "@/components/ui/button";
 import { Sheet, SheetContent, SheetHeader, SheetTitle, SheetTrigger } from "@/components/ui/sheet";
 import { supabase } from "@/lib/supabase";
-
+// import { ModeToggle } from "@/components/mode-toggle"; // <-- Ligne supprimée
 import { Avatar, AvatarFallback } from "@/components/ui/avatar";
 import { Badge } from "@/components/ui/badge";
 
 // Ajout de la prop unreadNotifications
 interface DashboardHeaderProps {
   type: "candidat" | "recruteur";
-  unreadNotifications?: number; // Nouveau
+  unreadNotifications?: number;
+  isDark: boolean; // Ajout du type pour le Dark Mode
+  setIsDark: (dark: boolean) => void; // Ajout du setter
 }
 
-export function DashboardHeader({ type, unreadNotifications = 0 }: DashboardHeaderProps) {
+export function DashboardHeader({ type, unreadNotifications = 0, isDark, setIsDark }: DashboardHeaderProps) {
   const navigate = useNavigate();
   const [isSheetOpen, setIsSheetOpen] = useState(false);
 
@@ -27,15 +29,14 @@ export function DashboardHeader({ type, unreadNotifications = 0 }: DashboardHead
     { name: type === "recruteur" ? "Tableau de Bord" : "Dashboard", path: type === "recruteur" ? "/dashboard-recruiter" : "/dashboard", icon: <User className="h-4 w-4" /> },
     { name: "Rechercher des profils", path: "/search", icon: <User className="h-4 w-4" /> },
     { name: "Messages", path: "/messages", icon: <User className="h-4 w-4" /> },
-    ...(type === "candidat" ? [{ name: "Mes favoris", path: "/favorites", icon: <User className="h-4 w-4" /> }] : []),
-    ...(type === "recruteur" ? [{ name: "Publier une annonce", path: "/post-job", icon: <User className="h-4 w-4" /> }] : []),
+    ...(type === "candidat" ? [{ name: "Mes favoris", path: "/favorites", icon: <Heart className="h-4 w-4" /> }] : []),
+    ...(type === "recruteur" ? [{ name: "Publier une annonce", path: "/post-job", icon: <Briefcase className="h-4 w-4" /> }] : []),
   ];
 
   return (
     <header className="sticky top-0 z-40 w-full bg-white border-b border-slate-200 dark:bg-slate-900 dark:border-slate-800 shadow-sm">
       <div className="container mx-auto flex h-16 items-center justify-between px-4">
         
-        {/* Logo */}
         <Link to="/" className="flex items-center space-x-2">
             <div className="flex h-8 w-8 items-center justify-center rounded-md bg-brand-blue text-brand-orange font-bold text-lg">
                 N
@@ -43,7 +44,6 @@ export function DashboardHeader({ type, unreadNotifications = 0 }: DashboardHead
             <span className="font-bold text-xl text-brand-blue dark:text-white hidden sm:inline">Ninafe</span>
         </Link>
         
-        {/* Menu Principal (Desktop) */}
         <nav className="hidden md:flex items-center space-x-6">
           <Link to="/search" className="text-sm font-medium text-slate-600 hover:text-brand-blue dark:text-slate-300 dark:hover:text-brand-orange transition-colors">Rechercher</Link>
           <Link to="/messages" className="text-sm font-medium text-slate-600 hover:text-brand-blue dark:text-slate-300 dark:hover:text-brand-orange transition-colors">Messages</Link>
@@ -58,7 +58,6 @@ export function DashboardHeader({ type, unreadNotifications = 0 }: DashboardHead
           )}
         </nav>
         
-        {/* Actions (Toggles & Profil) */}
         <div className="flex items-center space-x-3">
           
           {/* Icône de Notification avec Badge */}
@@ -66,7 +65,6 @@ export function DashboardHeader({ type, unreadNotifications = 0 }: DashboardHead
             <Link to="/job-candidates/1" className="relative cursor-pointer text-slate-600 dark:text-slate-300 hover:text-brand-orange" title="Nouvelles Candidatures">
                 <Bell className="h-5 w-5" />
                 {unreadNotifications > 0 && (
-                    // Ce badge affiche le nombre réel de notifications non lues
                     <Badge variant="destructive" className="absolute top-[-5px] right-[-5px] h-4 w-4 p-0 flex items-center justify-center rounded-full text-xs">
                         {unreadNotifications}
                     </Badge>
@@ -74,7 +72,10 @@ export function DashboardHeader({ type, unreadNotifications = 0 }: DashboardHead
             </Link>
           )}
 
-          <ModeToggle />
+          {/* Bouton Dark Mode (Fixé ici) */}
+          <Button variant="ghost" size="icon" onClick={() => setIsDark(!isDark)}>
+                {isDark ? <Sun className="h-5 w-5 text-yellow-500" /> : <Moon className="h-5 w-5 text-slate-600" />}
+          </Button>
 
           <Link to={type === "recruteur" ? "/dashboard-recruiter" : "/dashboard"}>
             <Avatar className="h-8 w-8 border-2 border-brand-blue dark:border-brand-orange cursor-pointer">
