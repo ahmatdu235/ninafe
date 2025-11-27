@@ -18,7 +18,7 @@ import RecruiterDashboard from "@/pages/RecruiterDashboard";
 import JobCandidates from "@/pages/JobCandidates"; 
 import Messages from "@/pages/Messages";
 import Favorites from "@/pages/Favorites";
-import PostJob from "@/pages/PostJob"; // Ajout de l'import PostJob
+import PostJob from "@/pages/PostJob"; // Remplacement de l'import PostJob
 
 // Définition de l'état d'authentification
 interface AuthState {
@@ -41,6 +41,7 @@ export default function App() {
     const [unreadNotifications, setUnreadNotifications] = useState(3); 
 
     useEffect(() => {
+        // Initialisation du Thème
         const root = window.document.documentElement;
         root.classList.remove(isDark ? "light" : "dark");
         root.classList.add(isDark ? "dark" : "light");
@@ -73,6 +74,7 @@ export default function App() {
             if (!role && window.location.pathname !== '/onboarding') {
                 navigate('/onboarding');
             } else if (role) {
+                // Redirection vers le Dashboard approprié
                 const targetPath = role === 'recruiter' ? '/dashboard-recruiter' : '/dashboard';
                 if (['/login', '/register', '/'].includes(window.location.pathname)) {
                     navigate(targetPath);
@@ -86,7 +88,7 @@ export default function App() {
             }
         }
         
-        setInitialLoading(false);
+        setLoading(false);
     };
     
     useEffect(() => {
@@ -147,7 +149,7 @@ export default function App() {
                 <Route path="/job/:id" element={<JobDetails {...commonProps} />} />
                 <Route path="/company/:id" element={<CompanyProfile {...commonProps} />} />
                 
-                {/* Pages Auth/Simples (elles acceptent les commonProps) */}
+                {/* Pages Auth/Simples */}
                 <Route path="/login" element={<Login {...commonProps} />} />
                 <Route path="/register" element={<Register {...commonProps} />} />
                 <Route path="/onboarding" element={<Onboarding {...commonProps} />} /> 
