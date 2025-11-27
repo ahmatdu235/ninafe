@@ -1,3 +1,5 @@
+// DANS src/pages/Login.tsx (Remplace TOUT le contenu)
+
 import React, { useState } from "react";
 import { Link, useNavigate } from "react-router-dom";
 import { Loader2 } from "lucide-react";
@@ -14,7 +16,20 @@ import {
 } from "@/components/ui/card";
 import { supabase } from "@/lib/supabase";
 
-export default function Login() {
+// --- INTERFACE COMMUNE ET COMPLÈTE (FIX TS2559) ---
+interface CommonPageProps {
+    isLoggedIn: boolean;
+    userRole: string | null;
+    id: string | null;
+    isDark: boolean;
+    setIsDark: (dark: boolean) => void;
+    setIsLoggedIn: (status: boolean) => void;
+    setUserRole: (role: string | null) => void;
+    unreadNotifications: number;
+}
+
+
+export default function Login(props: CommonPageProps) { // <--- ACCEPTE LES PROPS COMPLÈTES
   const navigate = useNavigate();
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
@@ -47,6 +62,10 @@ export default function Login() {
                 console.error("Erreur profil:", profileError);
                 navigate("/dashboard");
             } else {
+                // Mise à jour de l'état global du rôle pour le reste de l'application
+                props.setUserRole(profileData.role); 
+                props.setIsLoggedIn(true);
+
                 if (profileData.role === "recruiter") {
                     navigate("/dashboard-recruiter");
                 } else {

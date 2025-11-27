@@ -9,23 +9,21 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
 import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle, DialogTrigger, DialogFooter } from "@/components/ui/dialog";
-import { AppHeader } from "@/components/AppHeader"; // Header général
+import { DashboardHeader } from "@/components/DashboardHeader";
 import { supabase } from "@/lib/supabase";
-import { Separator } from "@/components/ui/separator";
 
-// Types des props passées par App.tsx
-interface DashboardProps {
+// --- INTERFACE DE PROPS COMPLETE (Identique à Dashboard.tsx) ---
+interface RecruiterDashboardProps {
     isLoggedIn: boolean;
     userRole: string | null;
     isDark: boolean;
     setIsDark: (dark: boolean) => void;
-    // Ajout des fonctions pour le Logout
-    setIsLoggedIn: (status: boolean) => void; 
+    setIsLoggedIn: (status: boolean) => void;
     setUserRole: (role: string | null) => void;
     unreadNotifications: number;
 }
 
-export default function RecruiterDashboard(props: DashboardProps) {
+export default function RecruiterDashboard(props: RecruiterDashboardProps) { // <--- ACCEPTE LES PROPS
     const [jobs, setJobs] = useState<any[]>([]);
     const [loading, setLoading] = useState(true);
     const [recruiterProfile, setRecruiterProfile] = useState<any>({});
@@ -34,7 +32,6 @@ export default function RecruiterDashboard(props: DashboardProps) {
     const [companyName, setCompanyName] = useState("");
     const [companyDesc, setCompanyDesc] = useState("");
     
-    // Vérification de l'exigence : Le profil est-il complet ?
     const isProfileComplete = recruiterProfile.full_name && recruiterProfile.bio;
 
     async function fetchRecruiterData() {
@@ -81,6 +78,7 @@ export default function RecruiterDashboard(props: DashboardProps) {
         if (error) alert("Erreur lors de la mise à jour du profil.");
         else {
             alert("Profil mis à jour !");
+            // FIX TS7006 : Typage explicite pour 'prev'
             setRecruiterProfile((prev: any) => ({ ...prev, full_name: companyName, bio: companyDesc }));
             setIsModalOpen(false);
         }
@@ -103,13 +101,17 @@ export default function RecruiterDashboard(props: DashboardProps) {
     return (
         <div className="min-h-screen bg-slate-50 dark:bg-slate-950 dark:text-slate-100 font-sans text-slate-900 transition-colors">
             
-            {/* Utilisation de l'AppHeader pour la cohérence globale */}
-            <AppHeader {...props} type="dashboard" /> 
+            {/* FIX : Passe les props complètes au Header */}
+            <DashboardHeader 
+                type="recruteur" 
+                unreadNotifications={props.unreadNotifications} 
+                isDark={props.isDark} 
+                setIsDark={props.setIsDark} 
+            /> 
 
             <div className="container mx-auto px-4 py-8">
                 <h1 className="text-3xl font-bold mb-6 dark:text-white">Espace Recrutement</h1>
 
-                {/* --- BLOC ALERTE/EXIGENCE (SI PROFIL INCOMPLET) --- */}
                 {!isProfileComplete && (
                     <Card className="mb-8 bg-red-50 dark:bg-red-900/20 border-red-200 dark:border-red-800 text-red-700">
                         <CardHeader className="flex flex-row items-center justify-between">
@@ -124,7 +126,6 @@ export default function RecruiterDashboard(props: DashboardProps) {
                     </Card>
                 )}
 
-
                 <div className="flex flex-col md:flex-row md:items-center justify-between gap-4 mb-8">
                     <div className="flex items-center gap-4">
                         <Avatar className="h-16 w-16 border-2 border-brand-orange">
@@ -133,11 +134,10 @@ export default function RecruiterDashboard(props: DashboardProps) {
                         </Avatar>
                         <div>
                             <h1 className="text-2xl font-bold text-brand-blue dark:text-white">{recruiterProfile.full_name || "Nom Entreprise"}</h1>
-                            <p className="text-slate-500 dark:text-slate-400">Gérez vos offres et vos recrutements</p>
+                            <p className="text-slate-500 dark:text-slate-400">Espace Recrutement</p>
                         </div>
                     </div>
                     <div className="flex gap-2">
-                        {/* Modale d'édition de profil */}
                         <Dialog open={isModalOpen} onOpenChange={setIsModalOpen}>
                             <DialogTrigger asChild>
                                 <Button variant="outline" className="dark:bg-slate-900 dark:text-white dark:hover:bg-slate-800">
@@ -177,10 +177,10 @@ export default function RecruiterDashboard(props: DashboardProps) {
                     </div>
                 </div>
                 
-                {/* Liste des offres (Visuellement désactivée si profil incomplet) */}
                 <Card className={`dark:bg-slate-900 dark:border-slate-800 ${!isProfileComplete ? 'opacity-50 pointer-events-none' : ''}`}>
                     <CardHeader>
                         <CardTitle className="dark:text-white">Mes annonces actives</CardTitle>
+                        <CardDescription className="dark:text-slate-400">Gérez vos recrutements en cours.</CardDescription>
                     </CardHeader>
                     <CardContent>
                         {loading ? (
@@ -189,7 +189,31 @@ export default function RecruiterDashboard(props: DashboardProps) {
                             <div className="text-center py-8 text-slate-500">Vous n'avez publié aucune annonce.</div>
                         ) : (
                             <div className="space-y-4">
-                                {/* Affichage des offres... */}
+                                {jobs.map((job) => (
+                                    <div key={job.id} className="flex flex-col sm:flex-row sm:items-center justify-between border p-4 rounded-lg bg-white dark:bg-slate-950 dark:border-slate-700 hover:bg-slate-50 dark:hover:bg-slate-900 transition-colors gap-4">
+                                        <div className="flex flex-col gap-1 flex-1">
+                                            <div className="flex items-center gap-2">
+                                                <span className="font-bold text-brand-blue dark:text-slate-200">{job.title}</span>
+                                                <Badge variant="outline" className="dark:text-slate-300 dark:border-slate-700">{job.type}</Badge>
+                                            </div>
+                                            <span className="text-sm text-slate-500 dark:text-slate-500 flex items-center gap-1">
+                                                <Briefcase className="h-3 w-3" /> {new Date(job.created_at).toLocaleDateString()}
+                                            </span>
+                                        </div>
+                                        <div className="flex items-center gap-4 min-w-[200px]">
+                                            <div className="flex items-center gap-1 text-sm font-medium text-slate-700 dark:text-slate-300">
+                                                <Users className="h-4 w-4 text-brand-orange" /> 
+                                                {job.candidatesCount} candidats
+                                            </div>
+                                            <Link to={`/job-candidates/${job.id}`}>
+                                                <Button size="sm" className="dark:bg-slate-800 dark:text-white dark:hover:bg-slate-700">Gérer</Button>
+                                            </Link>
+                                            <Button size="icon" variant="ghost" className="text-red-500 hover:bg-red-50 dark:hover:bg-red-900/20" onClick={() => deleteJob(job.id)}>
+                                                <Trash2 className="h-4 w-4" />
+                                            </Button>
+                                        </div>
+                                    </div>
+                                ))}
                             </div>
                         )}
                     </CardContent>
@@ -198,3 +222,4 @@ export default function RecruiterDashboard(props: DashboardProps) {
         </div>
     );
 }
+

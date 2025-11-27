@@ -14,7 +14,7 @@ export default function Onboarding() {
   const [role, setRole] = useState("");
   const [isLoading, setIsLoading] = useState(false);
 
-  const handleCompleteProfile = async () => {
+const handleCompleteProfile = async () => {
     if (!fullName || !role) {
       alert("Veuillez entrer votre nom complet et choisir un rôle.");
       return;
@@ -26,7 +26,6 @@ export default function Onboarding() {
       const { data: { user } } = await supabase.auth.getUser();
 
       if (user) {
-        // 1. Mettre à jour la ligne de profil (créée par le trigger)
         const { error } = await supabase
           .from('profiles')
           .update({
@@ -37,18 +36,18 @@ export default function Onboarding() {
 
         if (error) throw error;
         
-        // 2. Redirection intelligente
+        // ASTUCE : On force le rechargement complet vers la bonne page
+        // Cela garantit que App.tsx relit le profil depuis zéro
         if (role === 'recruiter') {
-          navigate("/dashboard-recruiter");
+          window.location.href = "/dashboard-recruiter";
         } else {
-          navigate("/dashboard");
+          window.location.href = "/dashboard";
         }
       }
     } catch (error) {
       alert("Erreur lors de la sauvegarde du profil.");
-    } finally {
-      setIsLoading(false);
-    }
+      setIsLoading(false); // On arrête le chargement seulement en cas d'erreur
+    } 
   };
 
   return (

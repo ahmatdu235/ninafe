@@ -1,14 +1,12 @@
-// DANS src/main.tsx (Remplace TOUT le contenu)
 import React from 'react'
 import ReactDOM from 'react-dom/client'
-// Importe explicitement le composant App
-import { default as App } from './App.tsx' 
+import App from './App.tsx'
 import './index.css'
-import { BrowserRouter } from 'react-router-dom'
+import { BrowserRouter } from 'react-router-dom' // Import du Router
 
 ReactDOM.createRoot(document.getElementById('root')!).render(
   <React.StrictMode>
-    <BrowserRouter>
+    <BrowserRouter> {/* Le Router englobe toute l'application */}
       <App />
     </BrowserRouter>
   </React.StrictMode>,

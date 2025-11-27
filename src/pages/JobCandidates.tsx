@@ -1,27 +1,29 @@
-// DANS src/pages/JobCandidates.tsx (Remplace TOUT le contenu)
-
 import React, { useState, useEffect } from "react";
 import { useParams, Link, useNavigate } from "react-router-dom";
 import { ArrowLeft, FileText, Mail, User, Loader2, Download, CheckCircle, XCircle } from "lucide-react";
 import { Button } from "@/components/ui/button";
-import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar"; // FIX: AvatarImage importé
+// FIX : Imports consolidés et complets pour Avatar
+import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
 import { Separator } from "@/components/ui/separator";
-import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription } from "@/components/ui/dialog"; // FIX: DialogDescription importé
+// FIX : Imports consolidés et complets pour Dialog
+import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription } from "@/components/ui/dialog";
 import { DashboardHeader } from "@/components/DashboardHeader";
 import { supabase } from "@/lib/supabase";
 import { Badge } from "@/components/ui/badge";
 
-// --- INTERFACE DE PROPS COMPLETE (Pour résoudre TS2739) ---
+// --- INTERFACE DE PROPS COMPLETE (Pour correspondre à App.tsx) ---
 interface JobCandidatesProps {
     isLoggedIn: boolean;
     userRole: string | null;
     isDark: boolean;
     setIsDark: (dark: boolean) => void;
+    setIsLoggedIn: (status: boolean) => void;
+    setUserRole: (role: string | null) => void;
     unreadNotifications: number;
 }
 
-export default function JobCandidates(props: JobCandidatesProps) { // ACCEPTE LES PROPS
+export default function JobCandidates(props: JobCandidatesProps) { // <--- ACCEPTE LES PROPS
   const { jobId } = useParams<{ jobId: string }>();
   const [job, setJob] = useState<any>(null);
   const [candidates, setCandidates] = useState<any[]>([]);
@@ -76,7 +78,6 @@ export default function JobCandidates(props: JobCandidatesProps) { // ACCEPTE LE
       }
   };
 
-
   if (loading) {
     return (
         <div className="flex min-h-screen items-center justify-center bg-slate-50 dark:bg-slate-950">
@@ -94,11 +95,10 @@ export default function JobCandidates(props: JobCandidatesProps) { // ACCEPTE LE
     );
   }
 
-
   return (
     <div className="min-h-screen bg-slate-50 dark:bg-slate-950 dark:text-slate-100 font-sans text-slate-900 transition-colors">
       
-      {/* CORRIGÉ : Passe les props de Dark Mode au Header */}
+      {/* FIX: Passage des props correctes au Header */}
       <DashboardHeader 
           type="recruteur" 
           isDark={props.isDark} 
@@ -128,7 +128,6 @@ export default function JobCandidates(props: JobCandidatesProps) { // ACCEPTE LE
                         <CardContent className="p-6">
                             <div className="flex flex-col md:flex-row gap-6 items-start">
 
-                                {/* Info Candidat */}
                                 <div className="flex items-start gap-4 min-w-[250px]">
                                     <Avatar className="h-16 w-16 border-2 border-slate-100 cursor-pointer">
                                         <AvatarImage src={`https://ui-avatars.com/api/?name=${app.full_name}&background=random`} />
@@ -149,7 +148,6 @@ export default function JobCandidates(props: JobCandidatesProps) { // ACCEPTE LE
 
                                 <Separator orientation="vertical" className="hidden md:block h-auto bg-slate-100 dark:bg-slate-800" />
 
-                                {/* Message et Documents */}
                                 <div className="flex-1 flex flex-col justify-center gap-3">
                                     <p className="text-sm italic text-slate-600 dark:text-slate-300 line-clamp-2">
                                         <Mail className="h-4 w-4 mr-2 inline-block" /> {app.message}
@@ -166,7 +164,6 @@ export default function JobCandidates(props: JobCandidatesProps) { // ACCEPTE LE
                                     </div>
                                 </div>
 
-                                {/* Décision */}
                                 <div className="flex flex-col gap-2 min-w-[120px]">
                                     <Button onClick={() => updateStatus(app.id, 'Accepté')} className="bg-green-600 hover:bg-green-700 text-white w-full text-xs">Accepter</Button>
                                     <Button onClick={() => updateStatus(app.id, 'Refusé')} variant="outline" className="text-red-500 border-red-200 hover:bg-red-50 w-full text-xs dark:bg-transparent dark:hover:bg-red-900/20">Refuser</Button>
@@ -179,14 +176,13 @@ export default function JobCandidates(props: JobCandidatesProps) { // ACCEPTE LE
             </div>
         )}
 
-        {/* MODALE DÉTAILS */}
         <Dialog open={!!selectedCandidate} onOpenChange={() => setSelectedCandidate(null)}>
             <DialogContent className="max-w-2xl dark:bg-slate-900 dark:border-slate-700 dark:text-white">
                 {selectedCandidate && (
                     <>
                         <DialogHeader>
                             <DialogTitle className="text-2xl font-bold text-brand-blue dark:text-white">{selectedCandidate.full_name}</DialogTitle>
-                            <DialogDescription className="dark:text-slate-400">Statut : {selectedCandidate.status}</DialogDescription>
+                            <DialogDescription>Statut : {selectedCandidate.status}</DialogDescription>
                         </DialogHeader>
                         <div className="space-y-4 mt-4">
                             <div className="bg-slate-50 dark:bg-slate-800 p-4 rounded-lg">
