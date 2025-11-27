@@ -143,7 +143,7 @@ export default function Dashboard() {
 
   return (
     <div className="min-h-screen bg-slate-50 dark:bg-slate-950 dark:text-slate-100 font-sans text-slate-900 transition-colors">
-      <DashboardHeader type="candidat" />
+      <DashboardHeader type="candidat" isDark={commonProps.isDark} setIsDark={commonProps.setIsDark} />
 
       <div className="container mx-auto px-4 py-8">
         <div className="flex flex-col md:flex-row items-start md:items-center gap-6 mb-8">

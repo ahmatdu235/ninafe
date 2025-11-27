@@ -96,7 +96,7 @@ export default function JobCandidates() {
 
   return (
     <div className="min-h-screen bg-slate-50 dark:bg-slate-950 dark:text-slate-100 font-sans text-slate-900 transition-colors">
-      <DashboardHeader type="recruteur" />
+      <DashboardHeader type="recruteur" isDark={commonProps.isDark} setIsDark={commonProps.setIsDark} />
 
       <div className="container mx-auto px-4 py-8 max-w-5xl">
         <div className="flex items-center justify-between mb-6">

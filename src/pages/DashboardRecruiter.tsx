@@ -107,7 +107,7 @@ export default function DashboardRecruiter() {
     return (
         <div className="min-h-screen bg-slate-50 dark:bg-slate-950 dark:text-slate-100 font-sans text-slate-900 transition-colors">
             {/* CORRIGÉ : Passe le nombre de notifications au DashboardHeader */}
-            <DashboardHeader type="recruteur" unreadNotifications={unreadNotifications} />
+            <DashboardHeader type="recruteur" unreadNotifications={unreadNotifications} isDark={props.isDark} setIsDark={props.setIsDark} />
 
             <div className="container mx-auto px-4 py-8">
                 {/* En-tête Dashboard */}
