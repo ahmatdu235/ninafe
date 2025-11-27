@@ -50,6 +50,7 @@ const mockJob = {
 
 const mockCompany = {
     name: "Tchad Numérique",
+    companyId: 1,
     description: "Tchad Numérique est une société de services numériques leader au Tchad, spécialisée dans la transformation digitale des entreprises locales et internationales. Notre mission est d'apporter des solutions technologiques adaptées au contexte africain.",
     jobsCount: 5,
     sector: "IT & Services",
@@ -139,7 +140,7 @@ export default function JobDetails(props: JobDetailsProps) { // Réception des p
                                 <p className="text-sm text-slate-600 dark:text-slate-400 line-clamp-3">{company.description}</p>
                             </CardHeader>
                             <CardContent className="space-y-4">
-                                <Link to={`/company/${company.companyId}`} className="text-brand-orange font-medium hover:underline text-sm">
+                                <Link to={`/company/${mockCompany.companyId}`} className="text-brand-orange font-medium hover:underline text-sm">
                                     Voir le profil complet ({company.jobsCount} offres) &rarr;
                                 </Link>
                                 <Separator className="dark:bg-slate-800" />

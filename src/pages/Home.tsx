@@ -162,7 +162,7 @@ export default function Home(props: HomeProps) {
                   </CardContent>
                   <CardFooter className="flex gap-2 flex-wrap border-t pt-4 dark:border-slate-800">
                     {job.tags.map((tag) => (<Badge key={tag} variant="secondary" className="text-xs font-normal dark:bg-slate-800 dark:text-slate-300">{tag}</Badge>))}
-                    <ApplyDialog jobTitle={job.title} companyName={job.company} />
+                    <ApplyDialog jobTitle={job.title} companyName={job.company} jobId={job.id} />
                   </CardFooter>
                 </Card>
               ))}

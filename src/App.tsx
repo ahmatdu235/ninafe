@@ -117,6 +117,7 @@ const commonProps = {
     ...userState, // isLogged, role, id
     isDark,
     setIsDark,
+    userRole: userState.role,
     unreadNotifications,
     
     // FIX CRITIQUE : AJOUTER LES SETTERS
