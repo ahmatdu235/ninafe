@@ -1,6 +1,8 @@
+// DANS src/main.tsx (Remplace TOUT le contenu)
 import React from 'react'
 import ReactDOM from 'react-dom/client'
-import App from './App.tsx'
+// Importe explicitement le composant App
+import { default as App } from './App.tsx' 
 import './index.css'
 import { BrowserRouter } from 'react-router-dom'
 
