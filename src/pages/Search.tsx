@@ -12,6 +12,18 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import { Card } from "@/components/ui/card";
 import { AppHeader } from "@/components/AppHeader"; // NOUVEAU HEADER
 
+
+// Interface à placer en haut de VOS PAGES (Home, Search, Dashboard, etc.)
+interface CommonPageProps {
+    isLoggedIn: boolean;
+    userRole: string | null;
+    isDark: boolean;
+    setIsDark: (dark: boolean) => void;
+    // Les setters sont nécessaires pour Logout sur les pages Auth
+    setIsLoggedIn: (status: boolean) => void;
+    setUserRole: (role: string | null) => void;
+    unreadNotifications: number;
+}
 // Types des props passées par App.tsx
 interface SearchProps {
     isLoggedIn: boolean;

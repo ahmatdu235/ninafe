@@ -13,6 +13,19 @@ import { Sheet } from "@/components/ui/sheet";
 import { Carousel, CarouselContent, CarouselItem } from "@/components/ui/carousel";
 import { Avatar, AvatarFallback } from "@/components/ui/avatar";
 
+
+
+// Interface à placer en haut de VOS PAGES (Home, Search, Dashboard, etc.)
+interface CommonPageProps {
+    isLoggedIn: boolean;
+    userRole: string | null;
+    isDark: boolean;
+    setIsDark: (dark: boolean) => void;
+    // Les setters sont nécessaires pour Logout sur les pages Auth
+    setIsLoggedIn: (status: boolean) => void;
+    setUserRole: (role: string | null) => void;
+    unreadNotifications: number;
+}
 // Types des props passées par App.tsx
 interface HomeProps {
     isLoggedIn: boolean;

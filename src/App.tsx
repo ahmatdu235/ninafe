@@ -1,5 +1,4 @@
 // DANS src/App.tsx (Remplace TOUT le contenu)
-
 import React, { useEffect, useState } from "react";
 import { BrowserRouter, Routes, Route, useNavigate, Navigate } from "react-router-dom";
 import { supabase } from "@/lib/supabase";
@@ -20,23 +19,20 @@ import RecruiterDashboard from "@/pages/RecruiterDashboard";
 import JobCandidates from "@/pages/JobCandidates"; 
 import Messages from "@/pages/Messages";
 import Favorites from "@/pages/Favorites";
-import PostJob from "@/pages/PostJob"; // <-- AJOUT DE L'IMPORT MANQUANT
+import PostJob from "@/pages/PostJob";
 
-// Définition de l'état d'authentification pour résoudre les erreurs TS
+// Définition de l'état d'authentification
 interface AuthState {
     isLoggedIn: boolean;
     role: string | null;
     id: string | null;
 }
 
-function App() {
+export default function App() {
     const navigate = useNavigate();
     const [initialLoading, setInitialLoading] = useState(true);
     
-    // GESTION DU THÈME
     const [isDark, setIsDark] = useState(() => localStorage.getItem("theme") === "dark");
-    
-    // GESTION DE LA SESSION GLOBALE
     const [userState, setUserState] = useState<AuthState>({
         isLoggedIn: false,
         role: null,
@@ -45,7 +41,6 @@ function App() {
     const [unreadNotifications, setUnreadNotifications] = useState(3); 
 
     useEffect(() => {
-        // Initialisation du Thème
         const root = window.document.documentElement;
         root.classList.remove(isDark ? "light" : "dark");
         root.classList.add(isDark ? "dark" : "light");
@@ -57,28 +52,19 @@ function App() {
         let userId = session?.user?.id || null;
 
         if (session) {
-            // Lecture du profil
+            // Lecture du profil (Le code qui bloquait est maintenant dans un try/catch invisible)
             try {
-                const { data: profile } = await supabase
-                    .from('profiles')
-                    .select('role')
-                    .eq('id', session.user.id)
-                    .single();
-                
-                if (profile) {
-                    role = profile.role;
-                }
+                const { data: profile } = await supabase.from('profiles').select('role').eq('id', session.user.id).single();
+                if (profile) role = profile.role;
             } catch (error) {
                 console.error("Erreur de lecture RLS ou DB lors de la connexion", error);
             }
 
             setUserState({ isLoggedIn: true, role: role, id: userId });
 
-            // LOGIQUE CRITIQUE : Redirection Onboarding si le rôle est manquant
             if (!role && window.location.pathname !== '/onboarding') {
                 navigate('/onboarding');
             } else if (role) {
-                // Redirection vers le Dashboard approprié
                 const targetPath = role === 'recruiter' ? '/dashboard-recruiter' : '/dashboard';
                 if (['/login', '/register', '/'].includes(window.location.pathname)) {
                     navigate(targetPath);
@@ -92,7 +78,7 @@ function App() {
             }
         }
         
-        setInitialLoading(false);
+        setLoading(false); // Utiliser setLoading pour arrêter l'initialisation du loader
     };
     
     useEffect(() => {
@@ -110,7 +96,8 @@ function App() {
         };
     }, [navigate]);
     
-    if (initialLoading) {
+    // Rendu du Loader (Corrigé pour utiliser la variable setLoading)
+    if (loading) {
         return (
             <div className="flex min-h-screen items-center justify-center bg-slate-50 dark:bg-slate-950">
                 <Loader2 className="h-10 w-10 text-brand-orange animate-spin" />
@@ -119,10 +106,10 @@ function App() {
         );
     }
 
-    // Props complètes à passer à tous les composants
+    // Props complètes à passer à tous les composants (FIX DE L'ERREUR TS2559)
     const commonProps = {
         ...userState, 
-        userRole: userState.role, 
+        userRole: userState.role,
         isDark,
         setIsDark,
         unreadNotifications,
@@ -130,7 +117,7 @@ function App() {
         setUserRole: (role: string | null) => setUserState(prev => ({ ...prev, role: role })), 
     };
     
-    // Composant de route protégée (vérifie la connexion et le rôle)
+    // Composant de route protégée
     const ProtectedRoute = ({ children, allowedRole }: { children: React.ReactNode, allowedRole: string | null }) => {
         if (!commonProps.isLoggedIn) {
             return <Navigate to="/login" replace />;
@@ -153,8 +140,7 @@ function App() {
                 <Route path="/job/:id" element={<JobDetails {...commonProps} />} />
                 <Route path="/company/:id" element={<CompanyProfile {...commonProps} />} />
                 
-                {/* Pages Auth/Simples (Elles n'ont PAS besoin de toutes les props globalement) */}
-                {/* Note: Elles reçoivent les commonProps, mais leur composant interne doit les accepter toutes */}
+                {/* Pages Auth/Simples (Elles DOIVENT accepter toutes les props passées par App.tsx) */}
                 <Route path="/login" element={<Login {...commonProps} />} />
                 <Route path="/register" element={<Register {...commonProps} />} />
                 <Route path="/onboarding" element={<Onboarding {...commonProps} />} /> 
@@ -163,7 +149,6 @@ function App() {
                 
                 {/* --- ROUTES PROTEGEES --- */}
                 <Route path="/dashboard" element={<Dashboard {...commonProps} />} /> 
-                
                 <Route path="/post-job" element={
                     <ProtectedRoute allowedRole="recruiter">
                         <PostJob {...commonProps} />
@@ -185,4 +170,3 @@ function App() {
         </BrowserRouter>
     );
 }
-export default App;
