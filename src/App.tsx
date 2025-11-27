@@ -1,4 +1,3 @@
-// DANS src/App.tsx (Remplace TOUT le contenu)
 import React, { useEffect, useState } from "react";
 import { BrowserRouter, Routes, Route, useNavigate, Navigate } from "react-router-dom";
 import { supabase } from "@/lib/supabase";
@@ -19,7 +18,7 @@ import RecruiterDashboard from "@/pages/RecruiterDashboard";
 import JobCandidates from "@/pages/JobCandidates"; 
 import Messages from "@/pages/Messages";
 import Favorites from "@/pages/Favorites";
-import PostJob from "@/pages/PostJob";
+import PostJob from "@/pages/PostJob"; // Ajout de l'import PostJob
 
 // Définition de l'état d'authentification
 interface AuthState {
@@ -33,6 +32,7 @@ export default function App() {
     const [initialLoading, setInitialLoading] = useState(true);
     
     const [isDark, setIsDark] = useState(() => localStorage.getItem("theme") === "dark");
+    
     const [userState, setUserState] = useState<AuthState>({
         isLoggedIn: false,
         role: null,
@@ -52,16 +52,24 @@ export default function App() {
         let userId = session?.user?.id || null;
 
         if (session) {
-            // Lecture du profil (Le code qui bloquait est maintenant dans un try/catch invisible)
+            // Lecture du profil
             try {
-                const { data: profile } = await supabase.from('profiles').select('role').eq('id', session.user.id).single();
-                if (profile) role = profile.role;
+                const { data: profile } = await supabase
+                    .from('profiles')
+                    .select('role')
+                    .eq('id', session.user.id)
+                    .single();
+                
+                if (profile) {
+                    role = profile.role;
+                }
             } catch (error) {
                 console.error("Erreur de lecture RLS ou DB lors de la connexion", error);
             }
 
             setUserState({ isLoggedIn: true, role: role, id: userId });
 
+            // Redirection Onboarding si le rôle est manquant
             if (!role && window.location.pathname !== '/onboarding') {
                 navigate('/onboarding');
             } else if (role) {
@@ -78,7 +86,7 @@ export default function App() {
             }
         }
         
-        setLoading(false); // Utiliser setLoading pour arrêter l'initialisation du loader
+        setInitialLoading(false);
     };
     
     useEffect(() => {
@@ -96,8 +104,7 @@ export default function App() {
         };
     }, [navigate]);
     
-    // Rendu du Loader (Corrigé pour utiliser la variable setLoading)
-    if (loading) {
+    if (initialLoading) {
         return (
             <div className="flex min-h-screen items-center justify-center bg-slate-50 dark:bg-slate-950">
                 <Loader2 className="h-10 w-10 text-brand-orange animate-spin" />
@@ -106,7 +113,7 @@ export default function App() {
         );
     }
 
-    // Props complètes à passer à tous les composants (FIX DE L'ERREUR TS2559)
+    // Props complètes à passer à tous les composants
     const commonProps = {
         ...userState, 
         userRole: userState.role,
@@ -134,13 +141,13 @@ export default function App() {
         <BrowserRouter>
             <Routes>
                 
-                {/* --- ROUTES PUBLIQUES (Passent toutes les commonProps) --- */}
+                {/* --- ROUTES PUBLIQUES (Auth incluses) --- */}
                 <Route path="/" element={<Home {...commonProps} />} />
                 <Route path="/search" element={<SearchPage {...commonProps} />} />
                 <Route path="/job/:id" element={<JobDetails {...commonProps} />} />
                 <Route path="/company/:id" element={<CompanyProfile {...commonProps} />} />
                 
-                {/* Pages Auth/Simples (Elles DOIVENT accepter toutes les props passées par App.tsx) */}
+                {/* Pages Auth/Simples (elles acceptent les commonProps) */}
                 <Route path="/login" element={<Login {...commonProps} />} />
                 <Route path="/register" element={<Register {...commonProps} />} />
                 <Route path="/onboarding" element={<Onboarding {...commonProps} />} /> 
@@ -149,6 +156,7 @@ export default function App() {
                 
                 {/* --- ROUTES PROTEGEES --- */}
                 <Route path="/dashboard" element={<Dashboard {...commonProps} />} /> 
+                
                 <Route path="/post-job" element={
                     <ProtectedRoute allowedRole="recruiter">
                         <PostJob {...commonProps} />
