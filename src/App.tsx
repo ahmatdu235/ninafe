@@ -112,13 +112,17 @@ function App() {
   }
 
   // Props complètes à passer à tous les composants
-  const commonProps = {
+ // DANS src/App.tsx (vers la ligne 104)
+const commonProps = {
     ...userState, // isLogged, role, id
     isDark,
     setIsDark,
     unreadNotifications,
-  };
-  
+    
+    // FIX CRITIQUE : AJOUTER LES SETTERS
+    setIsLoggedIn: (status: boolean) => setUserState(prev => ({ ...prev, isLoggedIn: status })), 
+    setUserRole: (role: string | null) => setUserState(prev => ({ ...prev, role: role })), 
+};
   // Composant de route protégée (vérifie la connexion et le rôle)
   const ProtectedRoute = ({ children, allowedRole }: { children: React.ReactNode, allowedRole: string | null }) => {
     if (!commonProps.isLoggedIn) {
