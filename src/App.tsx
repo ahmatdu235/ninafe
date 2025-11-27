@@ -11,108 +11,159 @@ import CompanyProfile from "@/pages/CompanyProfile";
 import LoginPage from "@/pages/Login";
 import RegisterPage from "@/pages/Register";
 
-// Pages Dashboard
+// Pages Dashboard et Protégées (Assurons-nous que les fichiers existent)
+import Dashboard from "@/pages/Dashboard"; 
+import RecruiterDashboard from "@/pages/RecruiterDashboard"; 
+import JobCandidates from "@/pages/JobCandidates"; 
+import Onboarding from "@/pages/Onboarding"; // Ajout de l'Onboarding si nécessaire
+import Messages from "@/pages/Messages"; // Ajout de Messages
+import Favorites from "@/pages/pages/Favorites"; // Ajout de Favorites
 
-import RecruiterDashboard from "@/pages/RecruiterDashboard"; // NOUVEAU
-import JobCandidates from "@/pages/JobCandidates"; // NOUVEAU
+// Le composant AppHeader est supposé être importé ici mais il est géré dans le rendu.
 
 export default function App() {
-  const [isDark, setIsDark] = useState(false);
-  const [isLoggedIn, setIsLoggedIn] = useState(false);
-  const [userRole, setUserRole] = useState<string | null>(null);
-  const [loading, setLoading] = useState(true);
-  
-  // --- ÉTAT DE SIMULATION POUR LES NOTIFICATIONS RECRUTEUR ---
-  // Le recruteur verra un badge "3" sur la cloche de notification.
-  const [unreadNotifications, setUnreadNotifications] = useState(3); 
+    const [isDark, setIsDark] = useState(false);
+    const [isLoggedIn, setIsLoggedIn] = useState(false);
+    const [userRole, setUserRole] = useState<string | null>(null);
+    const [loading, setLoading] = useState(true);
+    
+    // --- ÉTAT DE SIMULATION POUR LES NOTIFICATIONS ---
+    const [unreadNotifications, setUnreadNotifications] = useState(3); 
+    
+    // --- NOUVEAU : État utilisateur complet pour le passage de props ---
+    const [userState, setUserState] = useState({
+        isLoggedIn: false,
+        role: null,
+        id: null
+    });
 
-  useEffect(() => {
-    // 1. Initialiser le thème
-    const root = window.document.documentElement;
-    root.classList.remove(isDark ? "light" : "dark");
-    root.classList.add(isDark ? "dark" : "light");
+    useEffect(() => {
+        // 1. Initialiser le thème
+        const root = window.document.documentElement;
+        root.classList.remove(isDark ? "light" : "dark");
+        root.classList.add(isDark ? "dark" : "light");
+    }, [isDark]);
 
-    // 2. Vérification de l'état de la session (simplifié pour la démo)
+
     const checkSession = async () => {
-      const { data: { session } } = await supabase.auth.getSession();
+        const { data: { session } } = await supabase.auth.getSession();
 
-      if (session) {
-        setIsLoggedIn(true);
-        // Utilisation de localStorage pour simuler la persistance du rôle
-        // NOTE: En production, le rôle devrait être vérifié via la DB ou les claims JWT.
-        const storedRole = localStorage.getItem('userRole');
-        setUserRole(storedRole || 'candidat'); 
-      } else {
-        setIsLoggedIn(false);
-        setUserRole(null);
-      }
-      setLoading(false);
+        if (session) {
+            // Récupération simplifiée du rôle (pour débloquer la navigation)
+            const { data: profile } = await supabase.from('profiles').select('role, full_name, id').eq('id', session.user.id).single();
+            
+            let role = profile?.role || null;
+            
+            setUserRole(role);
+            setUserState({
+                isLoggedIn: true,
+                role: role,
+                id: session.user.id
+            });
+
+            // LOGIQUE DE REDIRECTION ONBOARDING (Si rôle manquant)
+            if (!role && window.location.pathname !== '/onboarding') {
+                 // Rediriger vers l'onboarding si le rôle n'est pas encore défini
+                 return navigate('/onboarding');
+            }
+            
+            // Si l'utilisateur est sur une page Auth, on le renvoie au Dashboard
+            if (['/login', '/register', '/'].includes(window.location.pathname)) {
+                const targetPath = role === 'recruiter' ? '/dashboard-recruiter' : '/dashboard';
+                return navigate(targetPath);
+            }
+            
+        } else {
+            setUserRole(null);
+            setUserState({ isLoggedIn: false, role: null, id: null });
+        }
+        setLoading(false);
     };
 
-    checkSession();
-  }, [isDark]);
+    useEffect(() => {
+        // Vérification initiale
+        checkSession();
 
-  // Props communes passées à tous les composants de page
-  const commonProps = {
-    isLoggedIn,
-    setIsLoggedIn,
-    userRole,
-    setUserRole,
-    isDark,
-    setIsDark,
-    unreadNotifications, // Passé à toutes les pages pour le Header
-  };
-  
-  // Composant de route protégée (vérifie la connexion et le rôle)
-  const ProtectedRoute = ({ children, allowedRole }: { children: React.ReactNode, allowedRole: string | null }) => {
-    if (loading) {
-        return (
-            <div className="flex min-h-screen items-center justify-center bg-slate-50 dark:bg-slate-950">
-                <Loader2 className="h-10 w-10 animate-spin mx-auto text-brand-orange" />
-            </div>
-        );
-    }
+        // Listener pour les changements d'état (Login/Logout)
+        const { data: authListener } = supabase.auth.onAuthStateChange((event, session) => {
+            if (event === 'SIGNED_IN' || event === 'SIGNED_OUT') {
+                 // Au changement d'état, on relance la vérification complète
+                 checkSession();
+            }
+        });
+
+        return () => {
+            authListener.subscription.unsubscribe();
+        };
+    }, []);
     
-    if (!isLoggedIn || (allowedRole && userRole !== allowedRole)) {
-      return <Navigate to="/login" replace />;
-    }
+    
+    // Props complètes à passer à tous les composants
+    const commonProps = {
+        ...userState,
+        isDark,
+        setIsDark,
+        unreadNotifications,
+        // Ces fonctions sont nécessaires mais ne peuvent pas être passées directement via ...userState si elles sont des setters
+        setIsLoggedIn: (status: boolean) => setUserState(prev => ({ ...prev, isLoggedIn: status })), 
+        setUserRole: (role: string | null) => setUserState(prev => ({ ...prev, role: role })), 
+    };
+    
+    // Composant de route protégée (vérifie la connexion et le rôle)
+    const ProtectedRoute = ({ children, allowedRole }: { children: React.ReactNode, allowedRole: string | null }) => {
+        if (loading) {
+            return (
+                <div className="flex min-h-screen items-center justify-center bg-slate-50 dark:bg-slate-950">
+                    <Loader2 className="h-10 w-10 animate-spin mx-auto text-brand-orange" />
+                </div>
+            );
+        }
+        
+        if (!commonProps.isLoggedIn) {
+            return <Navigate to="/login" replace />;
+        }
+        
+        // Si le rôle est spécifié (e.g. 'recruteur'), on vérifie que l'utilisateur a ce rôle.
+        if (allowedRole && commonProps.userRole !== allowedRole) {
+            // Si le rôle n'est pas bon, on renvoie au Dashboard par défaut
+            return <Navigate to="/dashboard" replace />;
+        }
 
-    return children;
-  };
+        return children;
+    };
 
-  return (
-    <BrowserRouter>
-      <Routes>
-        
-        {/* --- ROUTES PUBLIQUES (Ouvertes à tous) --- */}
-        <Route path="/" element={<HomePage {...commonProps} />} />
-        <Route path="/search" element={<SearchPage {...commonProps} />} />
-        <Route path="/job/:id" element={<JobDetails {...commonProps} />} />
-        <Route path="/company/:id" element={<CompanyProfile {...commonProps} />} />
-        <Route path="/login" element={<LoginPage {...commonProps} />} />
-        <Route path="/register" element={<RegisterPage {...commonProps} />} />
-        
-        <Route path="/dashboard" element={
-    <ProtectedRoute allowedRole="candidat">
-        {/* On utilise le composant Dashboard existant */}
-        <Dashboard {...commonProps} />
-    </ProtectedRoute>
-} />
-        
-        {/* --- ROUTES RECRUTEUR (NOUVELLES) --- */}
-        <Route path="/dashboard-recruiter" element={
-            <ProtectedRoute allowedRole="recruteur">
-                <RecruiterDashboard {...commonProps} />
-            </ProtectedRoute>
-        } />
-        
-        <Route path="/job-candidates/:jobId" element={
-            <ProtectedRoute allowedRole="recruteur">
-                <JobCandidates {...commonProps} />
-            </ProtectedRoute>
-        } />
-        
-      </Routes>
-    </BrowserRouter>
-  );
+    return (
+        <BrowserRouter>
+            <Routes>
+                
+                {/* --- ROUTES PUBLIQUES --- */}
+                <Route path="/" element={<HomePage {...commonProps} />} />
+                <Route path="/search" element={<SearchPage {...commonProps} />} />
+                <Route path="/job/:id" element={<JobDetails {...commonProps} />} />
+                <Route path="/company/:id" element={<CompanyProfile {...commonProps} />} />
+                <Route path="/login" element={<LoginPage {...commonProps} />} />
+                <Route path="/register" element={<RegisterPage {...commonProps} />} />
+                <Route path="/onboarding" element={<Onboarding {...commonProps} />} /> 
+
+                
+                {/* --- ROUTES PROTEGEES --- */}
+                
+                {/* Dashboard Candidat (accessible par tous les connectés) */}
+                <Route path="/dashboard" element={<Dashboard {...commonProps} />} />
+                
+                {/* Routes Recruteur (Restriction de Rôle) */}
+                <Route path="/dashboard-recruiter" element={
+                    <ProtectedRoute allowedRole="recruiter">
+                        <RecruiterDashboard {...commonProps} />
+                    </ProtectedRoute>
+                } />
+                <Route path="/job-candidates/:jobId" element={
+                    <ProtectedRoute allowedRole="recruiter">
+                        <JobCandidates {...commonProps} />
+                    </ProtectedRoute>
+                } />
+                
+            </Routes>
+        </BrowserRouter>
+    );
 }
