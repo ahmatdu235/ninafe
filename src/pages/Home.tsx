@@ -3,7 +3,7 @@ import { Search, MapPin, Briefcase, Menu, LogIn, ArrowRight, Sun, Star, UserPlus
 import { Link, useNavigate } from "react-router-dom";
 import Autoplay from "embla-carousel-autoplay";
 import { ApplyDialog } from "@/components/ApplyDialog";
-import { AppHeader } from "@/components/AppHeader"; // NOUVEAU : Import du Header dynamique
+import { AppHeader } from "@/components/AppHeader"; 
 
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -13,32 +13,23 @@ import { Sheet } from "@/components/ui/sheet";
 import { Carousel, CarouselContent, CarouselItem } from "@/components/ui/carousel";
 import { Avatar, AvatarFallback } from "@/components/ui/avatar";
 
-
-
-// Interface à placer en haut de VOS PAGES (Home, Search, Dashboard, etc.)
-interface CommonPageProps {
+// --- INTERFACE IDENTIQUE À CELLE DE APP.TSX ---
+interface HomeProps {
     isLoggedIn: boolean;
     userRole: string | null;
+    id: string | null;
     isDark: boolean;
     setIsDark: (dark: boolean) => void;
-    // Les setters sont nécessaires pour Logout sur les pages Auth
     setIsLoggedIn: (status: boolean) => void;
     setUserRole: (role: string | null) => void;
     unreadNotifications: number;
 }
-// Types des props passées par App.tsx
-interface HomeProps {
-    isLoggedIn: boolean;
-    userRole: string | null;
-    isDark: boolean;
-    setIsDark: (dark: boolean) => void;
-}
 
-// Données statiques...
+// Données statiques
 const heroSlides = [
   { id: 1, title: "Trouvez des artisans qualifiés", description: "Maçons, Plombiers, Électriciens prêts à intervenir.", image: "https://images.unsplash.com/photo-1504307651254-35680f356dfd?q=80&w=2000&auto=format&fit=crop" },
   { id: 2, title: "Experts du Digital & Tech", description: "Développeurs, Graphistes et Techniciens réseau.", image: "https://images.unsplash.com/photo-1573164713988-8665fc963095?q=80&w=2000&auto=format&fit=crop" },
-  { id: 3, title: "Transport & Logistique", description: "Chauffeurs et livreurs disponibles immédiatement.", image: "https://images.unsplash.com/photo-1586528116311-ad8dd3c8310d?q=80&w=2000&auto=format&fit-crop" },
+  { id: 3, title: "Transport & Logistique", description: "Chauffeurs et livreurs disponibles immédiatement.", image: "https://images.unsplash.com/photo-1586528116311-ad8dd3c8310d?q=80&w=2000&auto=format&fit=crop" },
 ];
 
 const categories = [
@@ -61,7 +52,7 @@ const testimonials = [
 ];
 
 
-export default function Home(props: HomeProps) {
+export default function Home(props: HomeProps) { // <--- ACCEPTE LES PROPS
   const heroPlugin = React.useRef(Autoplay({ delay: 4000, stopOnInteraction: true }));
   const testimonialPlugin = React.useRef(Autoplay({ delay: 5000, stopOnInteraction: true }));
   const navigate = useNavigate();
@@ -74,8 +65,14 @@ export default function Home(props: HomeProps) {
   return (
     <div className="min-h-screen bg-slate-50 dark:bg-slate-950 font-sans text-slate-900 dark:text-slate-100 transition-colors">
       
-      {/* --- NOUVEAU HEADER DYNAMIQUE (Utilise les props globales) --- */}
-      <AppHeader {...props} type="public" />
+      {/* Utilisation du Header avec les props */}
+      <AppHeader 
+        isLoggedIn={props.isLoggedIn}
+        userRole={props.userRole}
+        isDark={props.isDark}
+        setIsDark={props.setIsDark}
+        type="public" 
+      />
 
       <main>
         {/* HERO */}
@@ -163,7 +160,7 @@ export default function Home(props: HomeProps) {
                 <Card key={job.id} className="hover:shadow-md transition-shadow border-slate-200 dark:bg-slate-900 dark:border-slate-800">
                   <CardHeader>
                     <div className="flex justify-between items-start">
-                      <Badge variant="outline" className="mb-2 bg-slate-100 text-slate-600 border-slate-200 dark:bg-slate-950 dark:text-slate-300 dark:border-slate-700">{job.type}</Badge>
+                      <Badge variant="outline" className="mb-2 bg-slate-100 text-slate-600 border-slate-200 dark:bg-slate-900 dark:text-slate-300 dark:border-slate-700">{job.type}</Badge>
                       <span className="text-xs text-slate-400">{job.posted}</span>
                     </div>
                     <CardTitle className="text-lg text-brand-blue dark:text-slate-200 line-clamp-1">{job.title}</CardTitle>
@@ -175,7 +172,10 @@ export default function Home(props: HomeProps) {
                   </CardContent>
                   <CardFooter className="flex gap-2 flex-wrap border-t pt-4 dark:border-slate-800">
                     {job.tags.map((tag) => (<Badge key={tag} variant="secondary" className="text-xs font-normal dark:bg-slate-800 dark:text-slate-300">{tag}</Badge>))}
+                    
+                    {/* FIX: Passe l'ID du job */}
                     <ApplyDialog jobTitle={job.title} companyName={job.company} jobId={job.id} />
+                    
                   </CardFooter>
                 </Card>
               ))}
@@ -218,7 +218,7 @@ export default function Home(props: HomeProps) {
             <div className="container mx-auto px-4 grid md:grid-cols-4 gap-8 text-sm">
                 <div className="md:col-span-4">
                   <p className="text-center text-slate-500 text-xs">
-                    Pour que cette application fonctionne, n'oubliez pas d'exécuter la commande git push pour envoyer le code mis à jour.
+                    &copy; 2024 Ninafe Tchad. Tous droits réservés.
                   </p>
                 </div>
             </div>

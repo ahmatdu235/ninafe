@@ -21,7 +21,7 @@ import {
 } from "@/components/ui/select";
 import { supabase } from "@/lib/supabase";
 
-// --- INTERFACE OBLIGATOIRE POUR LE BUILD ---
+// --- INTERFACE COMMUNE OBLIGATOIRE (FIX TS2559) ---
 interface CommonPageProps {
     isLoggedIn: boolean;
     userRole: string | null;
