@@ -2,6 +2,7 @@ import React, { useEffect, useState } from "react";
 import { BrowserRouter, Routes, Route, useNavigate, Navigate } from "react-router-dom";
 import { supabase } from "@/lib/supabase";
 import { Loader2 } from "lucide-react";
+import { AppHeader } from "@/components/AppHeader"; // Assurez-vous que ce composant est bien importé
 
 // Pages publiques
 import Home from "@/pages/Home";
@@ -26,7 +27,7 @@ interface AuthState {
     id: string | null;
 }
 
-export default function App() {
+function App() {
     const navigate = useNavigate();
     const [initialLoading, setInitialLoading] = useState(true);
     
@@ -55,18 +56,14 @@ export default function App() {
 
         if (session) {
             // Lecture du profil
-            try {
-                const { data: profile } = await supabase
-                    .from('profiles')
-                    .select('role')
-                    .eq('id', session.user.id)
-                    .single();
-                
-                if (profile) {
-                    role = profile.role;
-                }
-            } catch (error) {
-                console.error("Erreur de lecture RLS ou DB lors de la connexion");
+            const { data: profile } = await supabase
+                .from('profiles')
+                .select('role')
+                .eq('id', session.user.id)
+                .single();
+            
+            if (profile) {
+                role = profile.role;
             }
 
             setUserState({ isLoggedIn: true, role: role, id: userId });
@@ -77,6 +74,8 @@ export default function App() {
             } else if (role) {
                 // Redirection vers le Dashboard approprié
                 const targetPath = role === 'recruiter' ? '/dashboard-recruiter' : '/dashboard';
+                
+                // On redirige seulement si on est sur une page publique (login, register, home)
                 if (['/login', '/register', '/'].includes(window.location.pathname)) {
                     navigate(targetPath);
                 }
@@ -146,11 +145,13 @@ export default function App() {
         <BrowserRouter>
             <Routes>
                 
-                {/* --- ROUTES PUBLIQUES (Auth incluses) --- */}
+                {/* --- ROUTES PUBLIQUES (Auth incluses, elles n'ont pas besoin de toutes les props) --- */}
                 <Route path="/" element={<Home {...commonProps} />} />
                 <Route path="/search" element={<SearchPage {...commonProps} />} />
                 <Route path="/job/:id" element={<JobDetails {...commonProps} />} />
                 <Route path="/company/:id" element={<CompanyProfile {...commonProps} />} />
+                
+                {/* Pages Auth/Simples (ne passent que les props nécessaires pour la déconnexion et le thème) */}
                 <Route path="/login" element={<Login {...commonProps} />} />
                 <Route path="/register" element={<Register {...commonProps} />} />
                 <Route path="/onboarding" element={<Onboarding {...commonProps} />} /> 
@@ -158,7 +159,7 @@ export default function App() {
                 <Route path="/messages" element={<Messages {...commonProps} />} />
                 
                 {/* --- ROUTES PROTEGEES --- */}
-                <Route path="/dashboard" element={<Dashboard {...commonProps} />} />
+                <Route path="/dashboard" element={<Dashboard {...commonProps} />} /> 
                 <Route path="/post-job" element={<ProtectedRoute allowedRole="recruiter"><PostJob {...commonProps} /></ProtectedRoute>} />
                 
                 {/* Routes Recruteur (Restriction de Rôle) */}

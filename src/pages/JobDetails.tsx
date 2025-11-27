@@ -120,7 +120,7 @@ export default function JobDetails(props: JobDetailsProps) { // Réception des p
                                 </ul>
 
                                 <div className="pt-4 flex flex-col sm:flex-row gap-4">
-                                    <ApplyDialog jobTitle={job.title} companyName={job.company} />
+                                    <ApplyDialog jobTitle={job.title} companyName={job.company} jobId={job.id} />
                                     <Button variant="outline" className="flex items-center gap-2 dark:border-slate-700 dark:text-slate-300 dark:hover:bg-slate-800">
                                         <Share2 className="h-4 w-4" /> Partager
                                     </Button>
