@@ -1,10 +1,13 @@
+// DANS src/components/DashboardHeader.tsx (Remplace TOUT le contenu)
+
 import React, { useState } from "react";
 import { Link, useNavigate } from "react-router-dom";
-import { LogOut, User, Menu, Bell, Sun, Moon } from "lucide-react"; // Import Sun/Moon
+// FIX : Ajout des icônes manquantes
+import { LogOut, User, Menu, Bell, Sun, Moon, Briefcase, Heart } from "lucide-react"; 
 import { Button } from "@/components/ui/button";
 import { Sheet, SheetContent, SheetHeader, SheetTitle, SheetTrigger } from "@/components/ui/sheet";
 import { supabase } from "@/lib/supabase";
-// import { ModeToggle } from "@/components/mode-toggle"; // <-- Ligne supprimée
+
 import { Avatar, AvatarFallback } from "@/components/ui/avatar";
 import { Badge } from "@/components/ui/badge";
 
@@ -37,6 +40,7 @@ export function DashboardHeader({ type, unreadNotifications = 0, isDark, setIsDa
     <header className="sticky top-0 z-40 w-full bg-white border-b border-slate-200 dark:bg-slate-900 dark:border-slate-800 shadow-sm">
       <div className="container mx-auto flex h-16 items-center justify-between px-4">
         
+        {/* Logo */}
         <Link to="/" className="flex items-center space-x-2">
             <div className="flex h-8 w-8 items-center justify-center rounded-md bg-brand-blue text-brand-orange font-bold text-lg">
                 N
@@ -44,6 +48,7 @@ export function DashboardHeader({ type, unreadNotifications = 0, isDark, setIsDa
             <span className="font-bold text-xl text-brand-blue dark:text-white hidden sm:inline">Ninafe</span>
         </Link>
         
+        {/* Menu Principal (Desktop) */}
         <nav className="hidden md:flex items-center space-x-6">
           <Link to="/search" className="text-sm font-medium text-slate-600 hover:text-brand-blue dark:text-slate-300 dark:hover:text-brand-orange transition-colors">Rechercher</Link>
           <Link to="/messages" className="text-sm font-medium text-slate-600 hover:text-brand-blue dark:text-slate-300 dark:hover:text-brand-orange transition-colors">Messages</Link>
@@ -58,6 +63,7 @@ export function DashboardHeader({ type, unreadNotifications = 0, isDark, setIsDa
           )}
         </nav>
         
+        {/* Actions (Toggles & Profil) */}
         <div className="flex items-center space-x-3">
           
           {/* Icône de Notification avec Badge */}

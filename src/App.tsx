@@ -1,8 +1,9 @@
+// DANS src/App.tsx (Remplace TOUT le contenu)
+
 import React, { useEffect, useState } from "react";
 import { BrowserRouter, Routes, Route, useNavigate, Navigate } from "react-router-dom";
 import { supabase } from "@/lib/supabase";
 import { Loader2 } from "lucide-react";
-import { AppHeader } from "@/components/AppHeader"; // Assurez-vous que ce composant est bien importé
 
 // Pages publiques
 import Home from "@/pages/Home";
@@ -19,6 +20,7 @@ import RecruiterDashboard from "@/pages/RecruiterDashboard";
 import JobCandidates from "@/pages/JobCandidates"; 
 import Messages from "@/pages/Messages";
 import Favorites from "@/pages/Favorites";
+import PostJob from "@/pages/PostJob"; // <-- AJOUT DE L'IMPORT MANQUANT
 
 // Définition de l'état d'authentification pour résoudre les erreurs TS
 interface AuthState {
@@ -56,14 +58,18 @@ function App() {
 
         if (session) {
             // Lecture du profil
-            const { data: profile } = await supabase
-                .from('profiles')
-                .select('role')
-                .eq('id', session.user.id)
-                .single();
-            
-            if (profile) {
-                role = profile.role;
+            try {
+                const { data: profile } = await supabase
+                    .from('profiles')
+                    .select('role')
+                    .eq('id', session.user.id)
+                    .single();
+                
+                if (profile) {
+                    role = profile.role;
+                }
+            } catch (error) {
+                console.error("Erreur de lecture RLS ou DB lors de la connexion", error);
             }
 
             setUserState({ isLoggedIn: true, role: role, id: userId });
@@ -74,15 +80,12 @@ function App() {
             } else if (role) {
                 // Redirection vers le Dashboard approprié
                 const targetPath = role === 'recruiter' ? '/dashboard-recruiter' : '/dashboard';
-                
-                // On redirige seulement si on est sur une page publique (login, register, home)
                 if (['/login', '/register', '/'].includes(window.location.pathname)) {
                     navigate(targetPath);
                 }
             }
         } else {
             setUserState({ isLoggedIn: false, role: null, id: null });
-            // Redirection vers le login si on est sur une route privée
             const isPrivateRoute = window.location.pathname.startsWith('/dashboard') || window.location.pathname === '/post-job' || window.location.pathname === '/messages' || window.location.pathname === '/favorites';
             if (isPrivateRoute) {
                 navigate('/login');
@@ -118,12 +121,11 @@ function App() {
 
     // Props complètes à passer à tous les composants
     const commonProps = {
-        ...userState, // isLoggedIn, role, id
-        userRole: userState.role, // EXPOSE 'role' EN TANT QUE 'userRole' (FIX TS2741)
+        ...userState, 
+        userRole: userState.role, 
         isDark,
         setIsDark,
         unreadNotifications,
-        // Fonctions nécessaires pour les boutons Logout
         setIsLoggedIn: (status: boolean) => setUserState(prev => ({ ...prev, isLoggedIn: status })), 
         setUserRole: (role: string | null) => setUserState(prev => ({ ...prev, role: role })), 
     };
@@ -145,13 +147,14 @@ function App() {
         <BrowserRouter>
             <Routes>
                 
-                {/* --- ROUTES PUBLIQUES (Auth incluses, elles n'ont pas besoin de toutes les props) --- */}
+                {/* --- ROUTES PUBLIQUES (Passent toutes les commonProps) --- */}
                 <Route path="/" element={<Home {...commonProps} />} />
                 <Route path="/search" element={<SearchPage {...commonProps} />} />
                 <Route path="/job/:id" element={<JobDetails {...commonProps} />} />
                 <Route path="/company/:id" element={<CompanyProfile {...commonProps} />} />
                 
-                {/* Pages Auth/Simples (ne passent que les props nécessaires pour la déconnexion et le thème) */}
+                {/* Pages Auth/Simples (Elles n'ont PAS besoin de toutes les props globalement) */}
+                {/* Note: Elles reçoivent les commonProps, mais leur composant interne doit les accepter toutes */}
                 <Route path="/login" element={<Login {...commonProps} />} />
                 <Route path="/register" element={<Register {...commonProps} />} />
                 <Route path="/onboarding" element={<Onboarding {...commonProps} />} /> 
@@ -160,9 +163,13 @@ function App() {
                 
                 {/* --- ROUTES PROTEGEES --- */}
                 <Route path="/dashboard" element={<Dashboard {...commonProps} />} /> 
-                <Route path="/post-job" element={<ProtectedRoute allowedRole="recruiter"><PostJob {...commonProps} /></ProtectedRoute>} />
                 
-                {/* Routes Recruteur (Restriction de Rôle) */}
+                <Route path="/post-job" element={
+                    <ProtectedRoute allowedRole="recruiter">
+                        <PostJob {...commonProps} />
+                    </ProtectedRoute>
+                } />
+                
                 <Route path="/dashboard-recruiter" element={
                     <ProtectedRoute allowedRole="recruiter">
                         <RecruiterDashboard {...commonProps} />

@@ -1,19 +1,18 @@
-
-// DANS src/pages/JobCandidates.tsx (Remplace le bloc d'imports actuel)
+// DANS src/pages/JobCandidates.tsx (Remplace le bloc d'imports)
 
 import React, { useState, useEffect } from "react";
 import { useParams, Link, useNavigate } from "react-router-dom";
 import { ArrowLeft, FileText, Mail, User, Loader2, Download, CheckCircle, XCircle } from "lucide-react";
 import { Button } from "@/components/ui/button";
-import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
+import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar"; // <-- FIX AVATARIMAGE
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
 import { Separator } from "@/components/ui/separator";
-import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription } from "@/components/ui/dialog"; // <-- CORRIGÉ
+import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription } from "@/components/ui/dialog"; // <-- FIX DIALOGDESCRIPTION
 import { DashboardHeader } from "@/components/DashboardHeader";
 import { supabase } from "@/lib/supabase";
-import { Badge } from "@/components/ui/badge"; // <-- AJOUTÉ
+import { Badge } from "@/components/ui/badge";
 
-// ... (Le reste du code reste inchangé) ...
+// ... (le reste du code est inchangé)
 
 export default function JobCandidates() {
   const { jobId } = useParams<{ jobId: string }>();
